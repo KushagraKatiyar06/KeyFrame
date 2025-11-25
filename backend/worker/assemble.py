@@ -1,6 +1,7 @@
 # FFmpeg will be used to process the audio and images to connect it tg
 import os
 import subprocess
+import tempfile
 
 def stitch_video(image_paths, audio_path, timings, job_id):
     """
@@ -9,7 +10,7 @@ def stitch_video(image_paths, audio_path, timings, job_id):
     """
     
     # creates a temp directory for this job if it doesn't exist
-    temp_dir = f'/tmp/keyframe_job_{job_id}'
+    temp_dir = os.path.join(tempfile.gettempdir(), f'keyframe_job_{job_id}')
     os.makedirs(temp_dir, exist_ok=True)
     
     # outputs video path
@@ -22,46 +23,61 @@ def stitch_video(image_paths, audio_path, timings, job_id):
         if len(image_paths) != 10 or len(timings) != 10:
             raise ValueError(f"Expected 10 images and 10 timings, got {len(image_paths)} images and {len(timings)} timings")
         
-        # creates a concat file for ffmpeg
-        concat_file_path = os.path.join(temp_dir, 'concat_list.txt')
-        
-        with open(concat_file_path, 'w') as f:
-            for i, (image_path, duration) in enumerate(zip(image_paths, timings)):
-                f.write(f"file '{image_path}'\n")
-                f.write(f"duration {duration}\n")
-            
-            f.write(f"file '{image_paths[-1]}'\n")
-        
-        # constructs the ffmpeg command
-        # this command creates a video from images and syncs it with audio
+        # Pre-encode each image into a short MP4 segment with the correct duration.
+        # This produces consistent codec parameters so we can concat the segments reliably.
+        segment_paths = []
 
         FFMPEG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'bin', 'ffmpeg.exe'))
 
+        for i, (image_path, duration) in enumerate(zip(image_paths, timings)):
+            segment_path = os.path.join(temp_dir, f'segment_{i}.mp4')
+            # -loop 1 keeps the image for the specified duration
+            segment_cmd = [
+                FFMPEG_PATH,
+                '-y',
+                '-loop', '1',
+                '-i', image_path,
+                '-c:v', 'libx264',
+                '-t', str(duration),
+                '-pix_fmt', 'yuv420p',
+                '-vf', 'scale=1920:1080',
+                '-r', '30',
+                '-preset', 'medium',
+                '-crf', '23',
+                segment_path
+            ]
+
+            print(f"Encoding segment {i+1}/{len(image_paths)}: {segment_path} ({duration}s)")
+            subprocess.run(segment_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            if not os.path.exists(segment_path):
+                raise Exception(f"Failed to create segment: {segment_path}")
+            segment_paths.append(segment_path)
+
+        # Create concat list of the encoded segments
+        concat_file_path = os.path.join(temp_dir, 'concat_list.txt')
+        with open(concat_file_path, 'w', encoding='utf-8') as f:
+            for p in segment_paths:
+                f.write(f"file '{p}'\n")
+
+        # Now concatenate segments and mux with the audio track into final mp4.
         ffmpeg_command = [
             FFMPEG_PATH,
-            '-y',  # overwrite output file if it exists
-            '-f', 'concat',  # use concat demuxer
-            '-safe', '0',  # allow absolute paths
-            '-i', concat_file_path,  # input concat file with images
-            '-i', audio_path,  # input audio file
-
-            '-map', '0:v', # Map the video stream (v) from the first input (0: images)
-            '-map', '1:a', # Map the audio stream (a) from the second input (1: audio file)
-
-            '-vsync', 'vfr',  # variable frame rate to match timings
-            '-pix_fmt', 'yuv420p',  # pixel format for compatibility
-            '-c:v', 'libx264',  # video codec
-            '-preset', 'medium',  # encoding preset 
-            '-crf', '23',  # quality
-            '-c:a', 'aac',  # audio codec
-            '-b:a', '192k',  # audio bitrate
-            '-shortest',  # finish when shortest input ends
+            '-y',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concat_file_path,
+            '-i', audio_path,
+            '-map', '0:v',
+            '-map', '1:a',
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-movflags', '+faststart',
+            '-shortest',
             output_path
         ]
-        
-        print(f"Running FFmpeg command...")
-        
-        # run the ffmpeg command
+
+        print(f"Running FFmpeg concat + mux command...")
         result = subprocess.run(
             ffmpeg_command,
             stdout=subprocess.PIPE,
@@ -69,7 +85,7 @@ def stitch_video(image_paths, audio_path, timings, job_id):
             text=True,
             check=True
         )
-        
+
         print(f"FFmpeg completed successfully")
         
         # verify the output file exists

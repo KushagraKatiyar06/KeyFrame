@@ -27,6 +27,7 @@ def generate_script(prompt, style):
         - Image prompts should capture key story moments and emotions visually""",
         
         'Meme': """Create a funny, internet-culture style video that's highly relatable and shareable.
+        - Try to use existing trends and memes that you see online on tikok or instagram
         - Use modern internet humor and trending formats
         - Be playful, ironic, or absurdist where appropriate
         - Reference common experiences everyone understands

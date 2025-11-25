@@ -43,11 +43,14 @@ def process_video_job(self,job_data):
         print(f"Job {job_id}: Generating images...")
         image_paths = images_generated.generate_images(script_data, job_id)
         
-        # step 3: ENABLE AMAZON POLLY
-        print(f"Job {job_id}: Generating voiceover with Polly...")
-        audio_path = voice_over.generate_voice_over(script_data, job_id)
-        
-        # step 4:stitch everything together with ffmpeg
+        # step 3: ENABLE AMAZON POLLY (per-slide synthesis)
+        print(f"Job {job_id}: Generating voiceover with Polly (per-slide)...")
+        audio_path, measured_timings = voice_over.generate_voice_over(script_data, job_id)
+
+        # override script timings with measured durations so images match speech
+        script_data['timings'] = measured_timings
+
+        # step 4: stitch everything together with ffmpeg
         print(f"Job {job_id}: Assembling video...")
         video_path = assemble.stitch_video(image_paths, audio_path, script_data['timings'], job_id)
         

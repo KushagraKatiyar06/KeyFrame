@@ -35,6 +35,11 @@ def generate_script(prompt, style):
         - Image prompts should be visually comedic, exaggerated, or use meme-style compositions"""
     }
     
+    # choose narration length: memes keep original length, others get ~double words
+    narration_word_count = '150-180'
+    if style in ('Educational', 'Storytelling'):
+        narration_word_count = '300-360'
+
     system_prompt = f"""You are an expert video script writer specializing in short-form content. 
 Generate a compelling, engaging script for a 60-second video.
 
@@ -63,7 +68,7 @@ NARRATION GUIDELINES:
 - Use short, punchy sentences that are easy to understand when heard
 - Make it conversational and engaging, not robotic
 - Each narration should naturally flow into the next
-- Total word count across all narrations should be around 150-180 words (comfortable speaking pace)
+- Total word count across all narrations should be around {narration_word_count} words (comfortable speaking pace)
 
 Return ONLY valid JSON in this exact format (no markdown, no extra text):
 {{

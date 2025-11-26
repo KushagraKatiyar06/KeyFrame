@@ -9,12 +9,12 @@ import assemble
 import storage
 from app import app
 from dotenv import load_dotenv
-import subprocess 
-import tempfile 
-import shutil   
+import subprocess # Keep subprocess for the mock failure handling
 
 # load environment variables for utility functions
 load_dotenv() 
+
+# --- REMOVED: The create_silent_audio function is deleted ---
     
 @app.task(bind=True)
 def process_video_job(self,job_data):
@@ -26,44 +26,40 @@ def process_video_job(self,job_data):
     prompt =job_data['prompt']
     style=job_data['style']
     
-
+    # Define audio_path outside try/except for cleanup
     audio_path = None
     video_path = None
     
-    temp_dir = os.path.join(tempfile.gettempdir(), f'keyframe_job_{job_id}')
-    os.makedirs(temp_dir, exist_ok=True)
-    print(f"Created job temp directory: {temp_dir}")
-    # -----------------------------------------------
-
     try:
         print(f"Starting job {job_id}-Style:{style}")
+        #updates status to processing
         database.update_job_status(job_id,'processing')
 
-        # step 1: generate the script using openai
+        # step 1:generate the script using openai
         print(f"Job {job_id}: Generating script...")
         script_data = script.generate_script(prompt,style)
         
-        # step 2: generate images for each slide using dynamic models
+        # step 2:generate images for each slide using nebius
         print(f"Job {job_id}: Generating images...")
-        # MODIFIED: Pass temp_dir and style
-        image_paths = image_generation.generate_images(script_data, job_id, style, temp_dir)
+        image_paths = image_generation.generate_images(script_data, job_id)
         
         # step 3: ENABLE AMAZON POLLY (per-slide synthesis)
         print(f"Job {job_id}: Generating voiceover with Polly (per-slide)...")
- 
-        audio_path, measured_timings = voice_over.generate_voice_over(script_data, job_id, temp_dir)
+        audio_path, measured_timings = voice_over.generate_voice_over(script_data, job_id)
+
+        # override script timings with measured durations so images match speech
         script_data['timings'] = measured_timings
 
         # step 4: stitch everything together with ffmpeg
         print(f"Job {job_id}: Assembling video...")
-        video_path = assemble.stitch_video(image_paths, audio_path, script_data['timings'], job_id, temp_dir)
+        video_path = assemble.stitch_video(image_paths, audio_path, script_data['timings'], job_id)
         
         # step 5: KEEP MOCK UPLOAD (Skipping R2)
         print(f"Job {job_id}: Skipping upload (testing locally, Polly enabled)...")
         video_url = f"LOCAL: {video_path}"
         thumbnail_url = f"LOCAL: {video_path}"
         
-        print(f"Video URL: {video_url}")
+        print(f"Video created at: {video_path}")
         
         # step 6: mark job as complete in database
         database.update_job_completed(job_id, video_url, thumbnail_url)
@@ -78,6 +74,11 @@ def process_video_job(self,job_data):
         
 
     except Exception as e:
+        # if anything fails, mark the job as failed
         print(f"Job {job_id} failed with error: {str(e)}")
         database.update_job_status(job_id, 'failed')
+        
+        # raise the exception so celery knows it failed
         raise e
+        
+   

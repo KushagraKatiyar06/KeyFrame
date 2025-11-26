@@ -2,142 +2,137 @@ import os
 import json
 from openai import OpenAI
 
-#initialize openai client with api key from environment
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+chatgpt = OpenAI(api_key = os.getenv('OPENAI_API_KEY'))
 
+# main script generation method
 def generate_script(prompt, style):
-    """Generate a 60-second video script with 10 slides using OpenAI
-    Returns a dict with title and slides array
-    """
+    print("Beginning script generation...\n\n")
+
+    # setting unique values for different style of videos
+    image_count = {'Educational' : 6, 'Storytelling' : 10, 'Meme' : 10, 'Default' : 5}
+    tts_count = {'Educational' : 6, 'Storytelling' : 10, 'Meme' : 10, 'Default' : 5}
+    video_length = {'Educational' : 60, 'Storytelling' : 60, "Meme" : 30, 'Default' : 30}
+
+    slide_length = {'Educational' : video_length['Educational'] / image_count['Educational'], 
+                    'Storytelling' : video_length['Storytelling'] / image_count["Storytelling"], 
+                    'Meme' : video_length['Meme'] / image_count['Meme'], 
+                    'Default' : video_length['Default'] / image_count['Default']}
     
-    # create a detailed system prompt based on the style
+    narration_word_count = {'Educational' : '300-360', 'Storytelling' : '300-360', 'Meme' : '180-200', 'Default' : '180-200'}
+
+    # overview of what each style should look like
     style_instructions = {
-        'Educational': """Create an educational video that teaches the topic clearly and thoroughly. 
-        - Use facts, explanations, and examples
-        - Break down complex ideas into simple parts
-        - Each slide should build on the previous one logically
-        - Use clear, instructive language
-        - Image prompts should show diagrams, illustrations, or visual representations of concepts""",
-        
-        'Storytelling': """Create a narrative story with a clear beginning, middle, and end. 
-        - Build tension and emotional engagement
-        - Use vivid descriptions and sensory details
-        - Create characters or scenarios the viewer can connect with
-        - Each slide should advance the plot
-        - Image prompts should capture key story moments and emotions visually""",
-        
-        'Meme': """Create a funny, internet-culture style video that's highly relatable and shareable.
-        - Use modern internet humor and trending formats
-        - Be playful, ironic, or absurdist where appropriate
-        - Reference common experiences everyone understands
-        - Each slide should build to a punchline or funny moment
-        - Image prompts should be visually comedic, exaggerated, or use meme-style compositions"""
+        'Educational' : """Script an educational video to briefly teach a concept. Use facts, explanations and real-world examples. If needed, break down complexities to parts.
+        Each slide should build on the previous one logically but use simple language. Image prompts should show diagrams, illustrations, or visualizations.""",
+
+        'Storytelling' : """Script a story with a clear beginning, middle, or end. Depending on the prompt, amplify the comedy, suspense or horror aspect. Use vivid descriptions and sensory details.
+        Each slide should logically advance the plot. Image prompts should be very visual and capture the dialogue visually.""",
+
+        'Meme' : """Script a funny and relevant funny video that takes inspiration from the latest tiktok and instagram trends. Depending on the prompt, make the video relatable and shareable. 
+        use modern internet humor and trending formats and be playful/ironic where appropriate. Reference common experiences everyone understands and each slide should build to a punchline or funny
+        moment. Image prompts should be visually comedic or exaggerated.""", 
+
+        'Default' : f"""Create a basic video that follows the prompt"""
     }
+
+    # context for chatgpt to correctly return json data for image/tts generation
+    chatgpt_prompt = f"""You are viral content creator specializing in short form content. Generate a compleling, engaging script.
+    style: {style}, style instructiions: {style_instructions.get(style, style_instructions['Default'])}. Generate exactly {image_count.get(style, image_count['Default'])} image prompts and {tts_count.get(style, tts_count['Default'])} narration prompts.
+    the overall word count for the entire script should be {narration_word_count.get(style, narration_word_count['Default'])}. Each slide as three components. 1. narration_prompt: the exact spoken text for this slide
+    (conversational, natural, flows well when spoken aloud). 2. image_prompt: a highly detailed, visual description for AI image genration (be specific about composition, style, mood, colors, subjects)
+    3. duration: Time in seconds (typically 5.5-6.5 seconds per slide, unless it is a meme)
+
+    IMAGE PROMPT GUIDELINES:
+    Be extremely specific and descriptive (include: subject, setting, lighting, mood, composition, art style)
+    Good example: "A cozy coffee shop interior at sunrise, warm golden light streaming through large windows, a steaming 
+    latte on a wooden table in the foreground, soft bokeh background with blurred customers, cinematic photography style, 
+    warm color palette". Bad example: "A coffee shop". Avoid text in images - describe visual scenes only. Each image should 
+    be distinct and visually interesting. Images should match and enhance the narration
     
-    system_prompt = f"""You are an expert video script writer specializing in short-form content. 
-Generate a compelling, engaging script for a 60-second video.
+    NARRATION PROMPT GUIDELINES:
+    Write as if speaking directly to the viewer. Use short, punchy sentences that are easy to understand when heard. Make it conversational 
+    and engaging, not robotic. Each narration should naturally flow into the next. Total word count across all narrations should be around 
+    {narration_word_count.get(style, narration_word_count['Default'])} words (comfortable speaking pace)
 
-STYLE: {style}
-{style_instructions.get(style, 'Create an engaging video.')}
-
-CRITICAL STRUCTURAL REQUIREMENTS:
-- Generate EXACTLY 10 slides, no more, no less
-- Each slide should be approximately 6 seconds long (adjust slightly if needed, but total must be close to 60 seconds)
-- Total duration across all 10 slides must sum to 58-62 seconds
-- Each slide must have these three components:
-  1. narration: The exact spoken text for this slide (conversational, natural, flows well when spoken aloud)
-  2. image_prompt: A highly detailed, visual description for AI image generation (be specific about composition, style, mood, colors, subjects)
-  3. duration: Time in seconds (typically 5.5-6.5 seconds per slide)
-
-IMAGE PROMPT GUIDELINES:
-- Be extremely specific and descriptive (include: subject, setting, lighting, mood, composition, art style)
-- Good example: "A cozy coffee shop interior at sunrise, warm golden light streaming through large windows, a steaming latte on a wooden table in the foreground, soft bokeh background with blurred customers, cinematic photography style, warm color palette"
-- Bad example: "A coffee shop"
-- Avoid text in images - describe visual scenes only
-- Each image should be distinct and visually interesting
-- Images should match and enhance the narration
-
-NARRATION GUIDELINES:
-- Write as if speaking directly to the viewer
-- Use short, punchy sentences that are easy to understand when heard
-- Make it conversational and engaging, not robotic
-- Each narration should naturally flow into the next
-- Total word count across all narrations should be around 150-180 words (comfortable speaking pace)
-
-Return ONLY valid JSON in this exact format (no markdown, no extra text):
-{{
+    return ONLY valid JSON in this exact format:
+    {{
   "title": "Engaging Video Title That Captures the Topic",
   "slides": [
     {{
-      "narration": "Natural spoken text for this slide",
+      "narration_prompt": "Natural spoken text for this slide",
       "image_prompt": "Extremely detailed visual description for AI image generation including composition, lighting, mood, style, colors, and specific subjects",
-      "duration": 6.0
+      "duration": {slide_length.get(style, slide_length['Default'])}
     }},
-    ...repeat for exactly 10 slides...
-  ]
-}}"""
+    repeat for exactly {image_count.get(style, image_count['Default'])} slides
+    ]
+    }}"""
 
     try:
-        #call openai api with detailed instructions
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", 
-            messages=[
-                {"role": "system", "content": system_prompt},
+        # api call to OpenAI
+        print("1. Calling OpenAI (openai api call)...")
+        response = chatgpt.chat.completions.create(
+            model = "gpt-4o-mini",
+            messages = [
+                {"role": "system", "content" : chatgpt_prompt},
                 {"role": "user", "content": f"Create a {style} style video about: {prompt}"}
             ],
-            temperature=0.8,  
-            max_tokens=2500 
+            temperature = 0.8,
+            max_tokens = 2500
         )
+
+        # grab and clean up the output -> convert to json
+        print("2. Cleaning output...")
+        output_json_string = response.choices[0].message.content.strip()
+
+        if output_json_string.startswith('```json'):
+            output_json_string = output_json_string[7:]
+        if output_json_string.startswith('```'):
+            output_json_string = output_json_string[3:]
+        if output_json_string.endswith('```'):
+            output_json_string = output_json_string[:-3]
+
+        output_json_string = output_json_string.strip()
+        script_json = json.loads(output_json_string)
+
+        # validate json file
+        print("3. Validating Json output\n")
+
+        # length
+        if len(script_json.get('slides', [])) != image_count.get(style, image_count['Default']):
+            raise ValueError (f'Expected {image_count.get(style, image_count['Default'])}, got len({script_json.get('slides', [])})') 
         
-        #get the response text
-        script_text = response.choices[0].message.content.strip()
-        
-        #remove the json in markdown code blocks
-        if script_text.startswith('```json'):
-            script_text = script_text[7:]
-        if script_text.startswith('```'):
-            script_text = script_text[3:]
-        if script_text.endswith('```'):
-            script_text = script_text[:-3]
-        script_text = script_text.strip()
-        
-        #parse the json
-        script_data = json.loads(script_text)
-        
-        #validate that there are exactly 10 slides
-        if len(script_data.get('slides', [])) != 10:
-            raise ValueError(f"Expected 10 slides, got {len(script_data.get('slides', []))}")
-        
-        #validate each slide has required fields
-        for i, slide in enumerate(script_data['slides']):
-            if not slide.get('narration'):
-                raise ValueError(f"Slide {i+1} missing narration")
+        # required fields per slide
+        for i, slide in enumerate(script_json['slides']):
+            if not slide.get('narration_prompt'):
+                raise ValueError(f"Slide {i+1} missing narration_prompt")
             if not slide.get('image_prompt'):
                 raise ValueError(f"Slide {i+1} missing image_prompt")
             if not slide.get('duration'):
                 raise ValueError(f"Slide {i+1} missing duration")
-        
-        #calculate timings for later use
-        timings = [slide['duration'] for slide in script_data['slides']]
-        script_data['timings'] = timings
-        
+            
+        # compute video length
+        timings = [slide['duration'] for slide in script_json['slides']]
+        script_json['timings'] = timings
         total_duration = sum(timings)
-        
-        print(f"Script generated: {script_data['title']}")
-        print(f"Total slides: {len(script_data['slides'])}")
-        print(f"Total duration: {total_duration} seconds")
-        
-        #warn if duration is too far off
+
+        # complete
+        print("4. Script generation complete: \n")
+        print(f"Script generated: {script_json['title']}")
+        print(f"Total slides: {len(script_json['slides'])}")
+        print(f"Total duration: {total_duration} seconds\n")
+
         if total_duration < 55 or total_duration > 65:
-            print(f"Warning: Total duration {total_duration}s is outside ideal range (58-62s)")
-        
-        return script_data
-        
+            print(f"WARNING: Video is {total_duration} seconds long, which is outside the ideal range.")
+
+        return script_json
+    
     except json.JSONDecodeError as e:
-        print(f"Error parsing OpenAI response as JSON: {e}")
-        print(f"Response was: {script_text}")
-        raise Exception("Failed to generate valid script JSON")
-        
+        print(f"Error parsing OpenAI resopnse as JSON: {e}")
+        print(f"Response was: {output_json_string}")
+        raise Exception("Failed to generated valid JSON")
+    
     except Exception as e:
-        print(f"Error generating script: {e}")
+        print(f"Error generating script {e}")
         raise
+
+

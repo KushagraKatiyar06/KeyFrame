@@ -235,29 +235,73 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
         <main className={styles.mainContainer}>
           <div className={styles.completeViewContainer}>
             <div className={styles.videoCard}>
-              <div className={styles.videoWrapper}>
+              <div className={styles.videoWrapperLarge}>
                 <video
                   controls
+                  preload="metadata"
+                  playsInline
+                  // ensure player reloads when jobId changes
+                  key={jobId}
                   src={`${API_BASE}/api/v1/videos/${jobId}`}
                   poster={jobStatus.thumbnailUrl || undefined}
-                  className="w-full h-full object-contain"
+                  className={styles.videoElement}
                 >
                   Your browser does not support the video tag.
                 </video>
               </div>
 
               <div className={styles.controlsRow}>
-                <input
-                  type="text"
-                  defaultValue={`VIDEO NAME #${jobId.slice(0, 4)}`}
-                  className={styles.videoTitleInput}
-                />
+                <div
+                  style={{ display: "flex", gap: "8px", alignItems: "center" }}
+                >
+                  <input
+                    type="text"
+                    defaultValue={
+                      jobStatus.title || `VIDEO NAME #${jobId.slice(0, 4)}`
+                    }
+                    className={styles.videoTitleInput}
+                    id="videoTitleInput"
+                  />
+                  <button
+                    className={styles.saveButton}
+                    onClick={async () => {
+                      const el = document.getElementById(
+                        "videoTitleInput"
+                      ) as HTMLInputElement;
+                      if (!el) return;
+                      const newTitle = el.value.trim();
+                      if (!newTitle) return;
+                      try {
+                        const res = await fetch(
+                          `${API_BASE}/api/v1/videos/${jobId}/title`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ title: newTitle }),
+                          }
+                        );
+                        if (res.ok) {
+                          setJobStatus({ ...jobStatus, title: newTitle });
+                        } else {
+                          console.error(
+                            "Failed to save title",
+                            await res.text()
+                          );
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
 
                 {/* REMOVED PENCIL ICON (EDIT BUTTON) */}
 
                 <a
-                  href={`${API_BASE}/api/v1/videos/${jobId}`}
-                  download={`keyframe-video-${jobId}.mp4`}
+                  href={`${API_BASE}/api/v1/videos/${jobId}?download=1`}
+                  // let the server set Content-Disposition for cross-origin downloads
                   className={styles.iconButton}
                 >
                   <svg
@@ -276,8 +320,21 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                     <line x1="12" x2="12" y1="15" y2="3" />
                   </svg>
                 </a>
-
-                <button className={styles.iconButton}>
+                <button
+                  className={styles.iconButton}
+                  onClick={() => {
+                    // fullscreen toggle
+                    const el = document.querySelector(
+                      `.${styles.videoWrapperLarge}`
+                    ) as HTMLElement;
+                    if (!el) return;
+                    if (!document.fullscreenElement) {
+                      el.requestFullscreen().catch((e) => console.error(e));
+                    } else {
+                      document.exitFullscreen().catch((e) => console.error(e));
+                    }
+                  }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -289,8 +346,10 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                    <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                    <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
                   </svg>
                 </button>
               </div>

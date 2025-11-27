@@ -2,6 +2,8 @@
 import os
 from celery import Task
 import database
+import redis as redis_py
+import json
 import script
 import image_generation
 import voice_over
@@ -35,39 +37,82 @@ def process_video_job(self,job_data):
     print(f"Created job temp directory: {temp_dir}")
     # -----------------------------------------------
 
+    # setup redis client for publishing progress (non-blocking best-effort)
+    redis_client = None
+    try:
+        REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+        redis_client = redis_py.from_url(REDIS_URL, decode_responses=True)
+    except Exception as e:
+        print(f"Warning: could not connect to redis for progress updates: {e}")
+
+    def publish_progress(jid, status, progress, video_url=None, thumbnail_url=None):
+        payload = {
+            'job_id': jid,
+            'status': status,
+            'progress': str(progress)
+        }
+        if video_url:
+            payload['video_url'] = video_url
+        if thumbnail_url:
+            payload['thumbnail_url'] = thumbnail_url
+        try:
+            if redis_client:
+                key = f"job:{jid}"
+                # write hash fields
+                redis_client.hset(key, mapping=payload)
+                # publish to channel
+                redis_client.publish(f"job_events:{jid}", json.dumps(payload))
+        except Exception as e:
+            print(f"Failed to publish progress to redis: {e}")
+
     try:
         print(f"Starting job {job_id}-Style:{style}")
-        database.update_job_status(job_id,'processing')
+        # best-effort: update DB if available, and publish redis progress
+        try:
+            database.update_job_status(job_id,'processing')
+        except Exception:
+            print("DB not available or update failed; continuing without DB")
+        publish_progress(job_id, 'processing', 5)
 
         # step 1: generate the script using openai
         print(f"Job {job_id}: Generating script...")
         script_data = script.generate_script(prompt,style)
+        publish_progress(job_id, 'script_generated', 15)
         
         # step 2: generate images for each slide using dynamic models
         print(f"Job {job_id}: Generating images...")
         # MODIFIED: Pass temp_dir and style
         image_paths = image_generation.generate_images(script_data, job_id, style, temp_dir)
+        publish_progress(job_id, 'images_generated', 40)
         
         # step 3: ENABLE AMAZON POLLY (per-slide synthesis)
         print(f"Job {job_id}: Generating voiceover with Polly (per-slide)...")
- 
+
         audio_path, measured_timings = voice_over.generate_voice_over(script_data, job_id, temp_dir)
+        publish_progress(job_id, 'voice_generated', 65)
         script_data['timings'] = measured_timings
 
         # step 4: stitch everything together with ffmpeg
         print(f"Job {job_id}: Assembling video...")
         video_path = assemble.stitch_video(image_paths, audio_path, script_data['timings'], job_id, temp_dir)
+        publish_progress(job_id, 'assembled', 90)
         
         # step 5: KEEP MOCK UPLOAD (Skipping R2)
         print(f"Job {job_id}: Skipping upload (testing locally, Polly enabled)...")
-        video_url = f"LOCAL: {video_path}"
-        thumbnail_url = f"LOCAL: {video_path}"
-        
+        video_url = f"file://{video_path}"
+        thumbnail_url = f"file://{video_path}"
+
         print(f"Video URL: {video_url}")
-        
-        # step 6: mark job as complete in database
-        database.update_job_completed(job_id, video_url, thumbnail_url)
-        
+
+        # best-effort DB update
+        try:
+            database.update_job_completed(job_id, video_url, thumbnail_url)
+        except Exception:
+            print("DB update for completion failed; continuing")
+
+        # publish final progress
+        publish_progress(job_id, 'done', 100, video_url=video_url, thumbnail_url=thumbnail_url)
+
         print(f"Job {job_id} completed successfully!")
         return {
             'status': 'success',
@@ -79,5 +124,9 @@ def process_video_job(self,job_data):
 
     except Exception as e:
         print(f"Job {job_id} failed with error: {str(e)}")
-        database.update_job_status(job_id, 'failed')
+        try:
+            database.update_job_status(job_id, 'failed')
+        except Exception:
+            print("DB update to failed skipped")
+        publish_progress(job_id, 'failed', 0)
         raise e

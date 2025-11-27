@@ -18,11 +18,15 @@ app.use((req, res, next) => {
 const generateRoute=require('./routes/generate');
 const statusRoute =require('./routes/status');
 const feedRoute = require('./routes/feed');
+const eventsRoute = require('./routes/events');
+const videosRoute = require('./routes/videos');
 
 //mounts the routes
 app.use('/api/v1/generate',generateRoute);
 app.use('/api/v1/status',statusRoute);
 app.use('/api/v1/feed',feedRoute);
+app.use('/api/v1/events', eventsRoute);
+app.use('/api/v1/videos', videosRoute);
 app.get('/', (req, res)=>{
   res.json({ message: 'KeyFrame API is running', status: 'ok' });
 });

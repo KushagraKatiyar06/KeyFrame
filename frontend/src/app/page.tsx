@@ -2,15 +2,14 @@
 
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Navbar } from './components/Navbar';
-import styles from './Home.module.css';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Navbar } from "./components/Navbar";
+import styles from "./Home.module.css";
 
-
-// The Initial Landing Splash 
+// The Initial Landing Splash
 const SplashSection = () => (
   <section className={styles.splashSection}>
     <div className={styles.topContentWrapper}>
@@ -24,18 +23,11 @@ const SplashSection = () => (
         />
       </div>
 
-      <h1 className={styles.welcomeText}>
-        WELCOME TO KEYFRAME
-      </h1>
+      <h1 className={styles.welcomeText}>WELCOME TO KEYFRAME</h1>
     </div>
 
-    <Link
-      href="#prompt-section"
-      className={styles.ctaLink}
-    >
-      <p className={styles.ctaText}>
-        GENERATE VIDEOS NOW
-      </p>
+    <Link href="#prompt-section" className={styles.ctaLink}>
+      <p className={styles.ctaText}>GENERATE VIDEOS NOW</p>
       {/* Down Arrow */}
       <svg
         className={styles.arrowIcon}
@@ -52,17 +44,15 @@ const SplashSection = () => (
   </section>
 );
 
-// The Prompt Input Area 
+// The Prompt Input Area
 const PromptSection = () => {
-
-  const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('Educational');
+  const [prompt, setPrompt] = useState("");
+  const [style, setStyle] = useState("Educational");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const stylesList = ['Educational', 'Meme', 'Story'];
-
+  const stylesList = ["Educational", "Meme", "Story"];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,26 +60,32 @@ const PromptSection = () => {
     setIsLoading(true);
 
     if (!prompt.trim()) {
-      setError('Please enter a prompt to generate a video.');
+      setError("Please enter a prompt to generate a video.");
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/v1/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Use explicit backend URL so the frontend dev server doesn't intercept the request
+      const API_BASE =
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      const response = await fetch(`${API_BASE}/api/v1/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, style }),
       });
 
-      if (response.status === 202) {
+      if (response.ok) {
         const data = await response.json();
         router.push(`/status/${data.jobId}`);
       } else {
-        setError('Failed to start video generation. Received status: ' + response.status);
+        setError(
+          "Failed to start video generation. Received status: " +
+            response.status
+        );
       }
     } catch (err) {
-      setError('A network error occurred while submitting the job.');
+      setError("A network error occurred while submitting the job.");
       console.error("Couldn't fetch", err);
     } finally {
       setIsLoading(false);
@@ -131,8 +127,9 @@ const PromptSection = () => {
                   key={s}
                   type="button"
                   onClick={() => setStyle(s)}
-                  className={`${styles.styleButton} ${style === s ? styles.selected : ''
-                    }`}
+                  className={`${styles.styleButton} ${
+                    style === s ? styles.selected : ""
+                  }`}
                   disabled={isLoading}
                 >
                   {s}
@@ -148,22 +145,36 @@ const PromptSection = () => {
             >
               {isLoading ? (
                 <>
-                  <svg className={styles.loadingIcon} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className={styles.loadingIcon}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Generating...
                 </>
               ) : (
-                'Start Generation'
+                "Start Generation"
               )}
             </button>
           </div>
 
           {/* Error Display */}
-          {error && (
-            <p className={styles.error}>{error}</p>
-          )}
+          {error && <p className={styles.error}>{error}</p>}
         </form>
       </div>
     </section>

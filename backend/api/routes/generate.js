@@ -30,18 +30,21 @@ router.post('/', async (req,res) =>{
       });
     }
     
-    //inserts the job into postgres
-    const jobId = await db.insertJob(prompt, style);
-    
-    //pushs the job to redis queue for the worker to pick up
+    // generate a job id and push to redis queue (skip DB insertion for now)
+    const { v4: uuidv4 } = require('uuid');
+    const jobId = uuidv4();
+
     const jobData = {
       id: jobId,
       prompt: prompt,
       style: style
     };
+
+    // set initial job state in redis and push to queue
+    await redis.setJobStatus(jobId, { status: 'queued', progress: '0', prompt, style });
     await redis.pushJob(jobData);
-    
-    //sends the response with the job id
+
+    // respond with job id
     res.status(201).json({ 
       success: true,
       jobId: jobId,

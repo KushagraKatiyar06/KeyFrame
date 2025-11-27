@@ -78,3 +78,31 @@ module.exports = {
   pushJob,
   getJob
 };
+
+// helper to set job status (hash) and publish an event
+async function setJobStatus(jobId, data) {
+  try {
+    const key = `job:${jobId}`;
+    // data is an object
+    await client.hSet(key, data);
+    // publish the event
+    await client.publish(`job_events:${jobId}`, JSON.stringify(data));
+  } catch (err) {
+    console.error('Error setting job status:', err);
+    throw err;
+  }
+}
+
+async function getJobStatus(jobId) {
+  try {
+    const key = `job:${jobId}`;
+    const res = await client.hGetAll(key);
+    return res; // object (empty if not found)
+  } catch (err) {
+    console.error('Error getting job status:', err);
+    throw err;
+  }
+}
+
+module.exports.setJobStatus = setJobStatus;
+module.exports.getJobStatus = getJobStatus;

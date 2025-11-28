@@ -19,8 +19,8 @@ interface FeedVideo {
   id: string;
   title: string;
   style: string;
-  thumbnailUrl: string;
-  videoUrl: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
 }
 
 export default function StatusPage({ params }: { params: { jobId: string } }) {
@@ -203,12 +203,16 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
           {feed.map((video) => (
             <div key={video.id} className={styles.videoCard}>
               <div className={styles.thumbnail}>
-                <Image
-                  src="/assets/thumbnails/mock.jpg"
+                {/* Prefer a thumbnailUrl if provided; otherwise use the backend public thumbnail path */}
+                <img
+                  src={
+                    video.thumbnailUrl ||
+                    `${API_BASE}/public/videos/${video.id}/thumbnail${video.id}.jpg`
+                  }
                   alt={`Thumbnail for ${video.title}`}
                   width={300}
                   height={180}
-                  style={{ width: "100%", height: "auto" }}
+                  style={{ width: "100%", height: "auto", objectFit: "cover" }}
                 />
               </div>
               <div className={styles.cardDetails}>
@@ -242,8 +246,13 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                   playsInline
                   // ensure player reloads when jobId changes
                   key={jobId}
-                  src={`${API_BASE}/api/v1/videos/${jobId}`}
-                  poster={jobStatus.thumbnailUrl || undefined}
+                  src={
+                    jobStatus.videoUrl || `${API_BASE}/api/v1/videos/${jobId}`
+                  }
+                  poster={
+                    jobStatus.thumbnailUrl ||
+                    `${API_BASE}/public/videos/${jobId}/thumbnail${jobId}.jpg`
+                  }
                   className={styles.videoElement}
                 >
                   Your browser does not support the video tag.

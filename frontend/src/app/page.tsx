@@ -52,7 +52,8 @@ const PromptSection = () => {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const stylesList = ["Educational", "Meme", "Story"];
+  // Must match backend allowed values: 'Educational', 'Storytelling', 'Meme'
+  const stylesList = ["Educational", "Meme", "Storytelling"];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

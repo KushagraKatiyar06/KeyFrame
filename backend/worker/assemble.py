@@ -2,12 +2,21 @@
 import os
 import subprocess
 import tempfile
+import shutil
 
 # use images and audio files to stitch into one video
 def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
     
-    os.makedirs(temp_dir, exist_ok=True)
-    output_path = os.path.join(temp_dir, f'final_video{job_id}.mp4')
+    # Allow overriding output dir via env var; default to C:\tmp on Windows or /tmp on other OSes
+    output_dir = os.environ.get('KEYFRAME_OUTPUT_DIR') or (r'C:\tmp' if os.name == 'nt' else '/tmp')
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create a per-job folder to store all assets for this job (INSIDE C:\tmp)
+    job_dir = os.path.join(output_dir, f'keyframe_job_{job_id}')
+    os.makedirs(job_dir, exist_ok=True)
+
+    # Path for final video - place it inside the job folder and name it final_video{jobId}.mp4
+    output_path = os.path.join(job_dir, f'final_video{job_id}.mp4')
     
     print(f"Stitching video with {len(image_paths)} images and audio...\n\n")
     
@@ -19,7 +28,8 @@ def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
         print("1. Iterating through clips and audios and stitching into video")
 
         for i, (image_path, duration) in enumerate(zip(image_paths, timings)):
-            segment_path = os.path.join(temp_dir, f'segment_{i}.mp4')
+            # write segment into the job folder so all assets for this job are colocated
+            segment_path = os.path.join(job_dir, f'segment_{i}.mp4')
             # -loop 1 keeps the image for the specified duration
             segment_cmd = [
                 FFMPEG_PATH,
@@ -42,10 +52,24 @@ def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
                 raise Exception(f"Failed to create segment: {segment_path}")
             segment_paths.append(segment_path)
 
-        concat_file_path = os.path.join(temp_dir, 'concat_list.txt')
+        concat_file_path = os.path.join(job_dir, 'concat_list.txt')
         with open(concat_file_path, 'w', encoding='utf-8') as f:
             for p in segment_paths:
                 f.write(f"file '{p}'\n")
+
+        # copy the audio into the job folder for easier debugging/inspection
+        try:
+            if audio_path and os.path.exists(audio_path):
+                audio_basename = os.path.basename(audio_path)
+                audio_copy_path = os.path.join(job_dir, audio_basename)
+                if os.path.abspath(audio_path) != os.path.abspath(audio_copy_path):
+                    shutil.copy2(audio_path, audio_copy_path)
+                # use the copy as input so the job folder is self-contained
+                audio_input = audio_copy_path
+            else:
+                audio_input = audio_path
+        except Exception:
+            audio_input = audio_path
 
         ffmpeg_command = [
             FFMPEG_PATH,
@@ -53,7 +77,7 @@ def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
             '-f', 'concat',
             '-safe', '0',
             '-i', concat_file_path,
-            '-i', audio_path,
+            '-i', audio_input,
             '-map', '0:v',
             '-map', '1:a',
             '-c:v', 'copy',
@@ -93,7 +117,6 @@ def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
         raise
 
 def get_video_info(video_path):
-    # NOTE: FFMPEG_PATH is still not accessible here, relying on system PATH for 'ffprobe'
     try:
         command = [
             'ffprobe',

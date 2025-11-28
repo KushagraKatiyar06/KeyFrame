@@ -106,21 +106,23 @@
 
 .videoWrapperLarge {
     width: 100%;
+    /* Reserve a 16:9 area so layout doesn't shift when video metadata loads */
+    aspect-ratio: 16/9;
     background-color: #000;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 1rem;
     position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: block;
 }
 
 .videoElement {
     width: 100%;
-    height: auto;
+    height: 100%;
     max-height: 70vh;
     background: black;
+    display: block;
+    object-fit: contain;
 }
 
 .saveButton {

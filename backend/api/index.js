@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./database');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +15,17 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
+
+// Ensure public/videos directory exists and serve it under /public
+const publicDir = path.join(__dirname, 'public');
+const publicVideos = path.join(publicDir, 'videos');
+try {
+  fs.mkdirSync(publicVideos, { recursive: true });
+  app.use('/public', express.static(publicDir));
+  console.log(`Serving static files from ${publicDir}`);
+} catch (err) {
+  console.error('Could not create or serve public directory:', err);
+}
 
 //imports route files
 const generateRoute=require('./routes/generate');

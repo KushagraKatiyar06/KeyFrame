@@ -117,7 +117,9 @@ export default function Feed() {
                   />
                 </div>
                 <div className={styles.videoInfo}>
-                  <h3 className={styles.videoTitle}>{video.title}</h3>
+                  <h3 className={styles.videoTitle} title={video.title}>
+                    {video.title}
+                  </h3>
                   <span className={styles.videoCategory}>{video.style}</span>
                 </div>
               </div>

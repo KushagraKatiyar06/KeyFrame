@@ -8,14 +8,14 @@ router.post('/', async (req,res) =>{
   try {
     const { prompt, style } = req.body;
     
-    //validate that prompt and style are provided
+    //check that prompt and style are provided
     if (!prompt || !style){
       return res.status(400).json({ 
         error: 'Missing required fields: prompt and style' 
       });
     }
     
-    // validate style is one of the allowed options
+    // check that style is one of the allowed options
     const validStyles = ['Educational','Storytelling','Meme'];
     if (!validStyles.includes(style)) {
       return res.status(400).json({ 
@@ -23,14 +23,14 @@ router.post('/', async (req,res) =>{
       });
     }
     
-    //validates prompt isn't too long
+    //make sures prompt isn't too long
     if (prompt.length > 500) {
       return res.status(400).json({ 
         error: 'Prompt is too long. Maximum 500 characters' 
       });
     }
     
-    //inserts the job into postgres
+    //this line inserts the job into postgres
     const jobId = await db.insertJob(prompt, style);
     
     //pushs the job to redis queue for the worker to pick up

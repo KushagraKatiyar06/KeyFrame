@@ -13,7 +13,7 @@ import subprocess
 import tempfile 
 import shutil   
 
-# load environment variables for utility functions
+#load environment variables for utility functions
 load_dotenv() 
     
 @app.task(bind=True)
@@ -58,10 +58,9 @@ def process_video_job(self,job_data):
         print(f"Job {job_id}: Assembling video...")
         video_path = assemble.stitch_video(image_paths, audio_path, script_data['timings'], job_id, temp_dir)
         
-        # step 5: KEEP MOCK UPLOAD (Skipping R2)
-        print(f"Job {job_id}: Skipping upload (testing locally, Polly enabled)...")
-        video_url = f"LOCAL: {video_path}"
-        thumbnail_url = f"LOCAL: {video_path}"
+        # step 5: Upload to Cloudflare R2
+        print(f"Job {job_id}: Uploading to Cloudflare R2...")
+        video_url, thumbnail_url = storage.upload_files(job_id, video_path, temp_dir)
         
         print(f"Video URL: {video_url}")
         

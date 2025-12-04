@@ -4,11 +4,11 @@ from openai import OpenAI
 
 chatgpt = OpenAI(api_key = os.getenv('OPENAI_API_KEY'))
 
-# main script generation method
+#the main script generation method
 def generate_script(prompt, style):
     print("Beginning script generation...\n\n")
 
-    # setting unique values for different style of videos
+    #setting unique values for different style of videos
     image_count = {'Educational' : 6, 'Storytelling' : 10, 'Meme' : 10, 'Default' : 5}
     tts_count = {'Educational' : 6, 'Storytelling' : 10, 'Meme' : 10, 'Default' : 5}
     video_length = {'Educational' : 60, 'Storytelling' : 60, "Meme" : 30, 'Default' : 30}
@@ -20,7 +20,7 @@ def generate_script(prompt, style):
     
     narration_word_count = {'Educational' : '300-360', 'Storytelling' : '300-360', 'Meme' : '180-200', 'Default' : '180-200'}
 
-    # overview of what each style should look like
+    #overview of what each style should look like
     style_instructions = {
         'Educational' : """Script an educational video to briefly teach a concept. Use facts, explanations and real-world examples. If needed, break down complexities to parts.
         Each slide should build on the previous one logically but use simple language. Image prompts should show diagrams, illustrations, or visualizations.""",
@@ -35,12 +35,12 @@ def generate_script(prompt, style):
         'Default' : f"""Create a basic video that follows the prompt"""
     }
 
-    # context for chatgpt to correctly return json data for image/tts generation
-    chatgpt_prompt = f"""You are viral content creator specializing in short form content. Generate a compleling, engaging script.
-    style: {style}, style instructiions: {style_instructions.get(style, style_instructions['Default'])}. Generate exactly {image_count.get(style, image_count['Default'])} image prompts and {tts_count.get(style, tts_count['Default'])} narration prompts.
-    the overall word count for the entire script should be {narration_word_count.get(style, narration_word_count['Default'])}. Each slide as three components. 1. narration_prompt: the exact spoken text for this slide
-    (conversational, natural, flows well when spoken aloud). 2. image_prompt: a highly detailed, visual description for AI image genration (be specific about composition, style, mood, colors, subjects)
-    3. duration: Time in seconds (typically 5.5-6.5 seconds per slide, unless it is a meme)
+    #ontext for chatgpt to correctly return json data for image/tts generation
+    chatgpt_prompt = f"""You are viral content creator specializing in short form content. Generate a compelling, engaging script.
+    style: {style}, style instructions: {style_instructions.get(style, style_instructions['Default'])}. Generate exactly {image_count.get(style, image_count['Default'])} image prompts and {tts_count.get(style, tts_count['Default'])} narration prompts.
+    the overall word count for the entire script should be {narration_word_count.get(style, narration_word_count['Default'])}. Each slide has three components. 1. narration_prompt: the exact spoken text for this slide
+    (conversational, natural, flows well when spoken aloud). 2. image_prompt: a highly detailed, visual description for AI image generation (be specific about composition, style, mood, colors, subjects)
+    3. duration: Estimated time in seconds (will be adjusted based on actual audio length, target ~{slide_length.get(style, slide_length['Default']):.1f}s per slide)
 
     IMAGE PROMPT GUIDELINES:
     Be extremely specific and descriptive (include: subject, setting, lighting, mood, composition, art style)
@@ -68,7 +68,7 @@ def generate_script(prompt, style):
     }}"""
 
     try:
-        # api call to OpenAI
+        #api call to OpenAI
         print("1. Calling OpenAI (openai api call)...")
         response = chatgpt.chat.completions.create(
             model = "gpt-4o-mini",
@@ -80,7 +80,7 @@ def generate_script(prompt, style):
             max_tokens = 2500
         )
 
-        # grab and clean up the output -> convert to json
+        #grab and clean up the output and then it wil convert to json
         print("2. Cleaning output...")
         output_json_string = response.choices[0].message.content.strip()
 
@@ -94,14 +94,14 @@ def generate_script(prompt, style):
         output_json_string = output_json_string.strip()
         script_json = json.loads(output_json_string)
 
-        # validate json file
+        #validates the json file
         print("3. Validating Json output\n")
 
-        # length
+        #length of the video 
         if len(script_json.get('slides', [])) != image_count.get(style, image_count['Default']):
             raise ValueError (f'Expected {image_count.get(style, image_count['Default'])}, got len({script_json.get('slides', [])})') 
         
-        # required fields per slide
+        #required fields per slide
         for i, slide in enumerate(script_json['slides']):
             if not slide.get('narration_prompt'):
                 raise ValueError(f"Slide {i+1} missing narration_prompt")
@@ -110,19 +110,23 @@ def generate_script(prompt, style):
             if not slide.get('duration'):
                 raise ValueError(f"Slide {i+1} missing duration")
             
-        # compute video length
+        #computes the video length
         timings = [slide['duration'] for slide in script_json['slides']]
         script_json['timings'] = timings
         total_duration = sum(timings)
 
-        # complete
+        #completes it and lists the amount of slides and duration
         print("4. Script generation complete: \n")
         print(f"Script generated: {script_json['title']}")
         print(f"Total slides: {len(script_json['slides'])}")
         print(f"Total duration: {total_duration} seconds\n")
 
-        if total_duration < 55 or total_duration > 65:
-            print(f"WARNING: Video is {total_duration} seconds long, which is outside the ideal range.")
+        #Style-specific duration validation
+        expected_duration = video_length.get(style, video_length['Default'])
+        tolerance = 10  #Allows for a 10 seconds variance
+
+        if total_duration < (expected_duration - tolerance) or total_duration > (expected_duration + tolerance):
+            print(f"WARNING: {style} video is {total_duration} seconds long, expected ~{expected_duration}s (±{tolerance}s)")
 
         return script_json
     

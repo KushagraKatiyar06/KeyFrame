@@ -1,8 +1,12 @@
-#Nebuis with the Flux schenell model will be used to generate the 10 images 
+#Nebuis with the Flux schenell model will be used to generate the 10 images
 import os
 import time
 import base64
 from openai import OpenAI
+from dotenv import load_dotenv
+
+#load environment variables
+load_dotenv()
 
 def generate_images(script_data, job_id):
     #Generates images for each slide using Nebius AI (Flux-Schnell) Returns a list of image file paths

@@ -1,5 +1,4 @@
-// src/app/api/v1/status/[JobId]/route.js
-
+//src/app/api/v1/status/[JobId]/route.js
 import { NextResponse } from 'next/server';
 
 export async function GET(request, { params }) {

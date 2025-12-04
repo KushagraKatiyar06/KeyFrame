@@ -139,6 +139,24 @@ async function getRecentCompletedVideos() {
   }
 }
 
+//deletes videos by prompt text
+async function deleteVideosByPrompt(prompt) {
+  const query = `
+    DELETE FROM videos
+    WHERE prompt = $1
+    RETURNING id;
+  `;
+
+  try {
+    const result = await pool.query(query, [prompt]);
+    console.log(`Deleted ${result.rowCount} video(s) with prompt: "${prompt}"`);
+    return { success: true, deletedCount: result.rowCount };
+  } catch (error) {
+    console.error('Error deleting videos:', error.message);
+    throw error;
+  }
+}
+
 //cleanup function to close the database connection
 async function closePool() {
   try {
@@ -156,5 +174,6 @@ module.exports = {
   updateJobStatus,
   getJobById,
   getRecentCompletedVideos,
+  deleteVideosByPrompt,
   closePool
 };

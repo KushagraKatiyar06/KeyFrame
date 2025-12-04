@@ -9,9 +9,10 @@ import assemble
 import storage
 from app import app
 from dotenv import load_dotenv
-import subprocess 
-import tempfile 
-import shutil   
+import subprocess
+import tempfile
+import shutil
+from concurrent.futures import ThreadPoolExecutor   
 
 #load environment variables for utility functions
 load_dotenv() 
@@ -42,17 +43,31 @@ def process_video_job(self,job_data):
         # step 1: generate the script using openai
         print(f"Job {job_id}: Generating script...")
         script_data = script.generate_script(prompt,style)
-        
-        # step 2: generate images for each slide using dynamic models
-        print(f"Job {job_id}: Generating images...")
-        # MODIFIED: Pass temp_dir and style
-        image_paths = image_generation.generate_images(script_data, job_id, style, temp_dir)
-        
-        # step 3: ENABLE AMAZON POLLY (per-slide synthesis)
-        print(f"Job {job_id}: Generating voiceover with Polly (per-slide)...")
- 
-        audio_path, measured_timings = voice_over.generate_voice_over(script_data, job_id, temp_dir)
+
+        # step 2 & 3: generate images and voiceover IN PARALLEL
+        print(f"Job {job_id}: Generating images and voiceover in parallel...")
+
+        image_paths = None
+        audio_path = None
+        measured_timings = None
+
+        def generate_images_task():
+            return image_generation.generate_images(script_data, job_id, style, temp_dir)
+
+        def generate_voiceover_task():
+            return voice_over.generate_voice_over(script_data, job_id, temp_dir)
+
+        # Run both tasks in parallel
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_images = executor.submit(generate_images_task)
+            future_voice = executor.submit(generate_voiceover_task)
+
+            # Wait for both to complete
+            image_paths = future_images.result()
+            audio_path, measured_timings = future_voice.result()
+
         script_data['timings'] = measured_timings
+        print(f"Job {job_id}: Parallel generation complete!")
 
         # step 4: stitch everything together with ffmpeg
         print(f"Job {job_id}: Assembling video...")

@@ -1,0 +1,25 @@
+# Dockerfile for Celery Worker
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for ffmpeg and other tools
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy worker requirements
+COPY worker/requirements.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy worker source code
+COPY worker/ ./
+
+# Copy ffmpeg binary from bin directory (if you have a custom one)
+# If not using custom ffmpeg, remove these lines
+# COPY bin/ffmpeg.exe /usr/local/bin/ffmpeg
+# RUN chmod +x /usr/local/bin/ffmpeg
+
+CMD ["celery", "-A", "app", "worker", "--loglevel=info", "--pool=solo"]

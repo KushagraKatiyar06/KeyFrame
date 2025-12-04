@@ -32,7 +32,18 @@ export default function Feed() {
       }
       const data = await response.json();
       //Backend returns { success, count, videos: [...]}
-      setVideos(data.videos || data);
+      const rawVideos = data.videos || data;
+
+      //Transforms the backend format to frontend format
+      const transformedVideos = rawVideos.map((video: any) => ({
+        id: video.id,
+        title: video.prompt || video.title, //Use prompt as title to show in feed (but cuts it off at a certain point)
+        style: video.style,
+        thumbnailUrl: video.thumbnail_url || video.thumbnailUrl,
+        videoUrl: video.video_url || video.videoUrl
+      }));
+
+      setVideos(transformedVideos);
     } catch (err) {
       setError('Failed to load community videos');
       console.error(err);
@@ -41,7 +52,7 @@ export default function Feed() {
     }
   };
 
-  const categories = ['All', 'Educational', 'Meme', 'Story'];
+  const categories = ['All', 'Educational', 'Meme', 'Storytelling'];
 
   const filteredVideos = selectedCategory === 'All'
     ? videos

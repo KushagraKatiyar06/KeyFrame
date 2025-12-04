@@ -59,7 +59,7 @@ const PromptSection = () => {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const stylesList = ['Educational', 'Meme', 'Story'];
+  const stylesList = ['Educational', 'Meme', 'Storytelling'];
 
 
   const handleSubmit = async (e: React.FormEvent) => {

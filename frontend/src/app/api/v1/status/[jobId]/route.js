@@ -15,13 +15,23 @@ export async function GET(request, { params }) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data, { status: 200 });
+
+        // Transform snake_case to camelCase for frontend
+        const transformedData = {
+            jobId: data.id,
+            status: data.status,
+            progress: data.status === 'done' ? 100 : data.status === 'processing' ? 50 : 0,
+            videoUrl: data.video_url,
+            thumbnailUrl: data.thumbnail_url
+        };
+
+        return NextResponse.json(transformedData, { status: 200 });
     } catch (error) {
         console.error('Error fetching status from backend:', error);
         return NextResponse.json({
             error: 'Failed to get job status',
             jobId,
-            status: 'ERROR',
+            status: 'failed',
             progress: 0
         }, { status: 500 });
     }

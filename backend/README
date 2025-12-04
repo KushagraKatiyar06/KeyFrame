@@ -1,80 +1,125 @@
 # ⚙️ KeyFrame Backend Services
 
-This directory contains the full stack for the KeyFrame video generation pipeline, including the **Node.js API Gateway** and the **Python Celery Worker**.
+This directory contains the backend pieces for the KeyFrame video generation pipeline: the **Node.js API Gateway** (`backend/api`) and the **Python worker** (`backend/worker`) that performs script generation, image/TTS generation, and assembly.
+
+The README below keeps the existing notes but adds concrete, copy-paste setup items you can use to get a local dev environment running quickly.
 
 ---
 
-## 1. Prereqs & Setup
+## 1) Quick checklist (minimum to run locally)
 
-This project requires specific system dependencies and two running external services.
+- Install Node.js (v18+) and Python (3.10+)
+- Docker (optional but recommended) or run Redis and Postgres locally
+- Place `ffmpeg`/`ffprobe` in `./bin/` or ensure they are installed on the PATH
+- Create a `.env` (see `.env.example`) with API keys and DB/Redis URIs
+- Install Node deps in `backend/api` and Python deps in `backend/worker`
 
-| Action | Command | Notes |
-| :--- | :--- | :--- |
-| **Prerequisite** | Install Node.js (v18+) & Python (v3.10+) | Required for both services. |
-| **External Service**| Run **Redis** and **PostgreSQL** instances. | Required for the job queue and data persistence. |
-| **Config** | Create and populate **`.env`** in the **root directory**. | Requires API keys for OpenAI, Nebius, AWS, and Cloudflare R2. |
-| **API Setup** | `cd backend/api` then `npm install` | Installs Express, `pg`, `redis`, etc. |
-| **Worker Setup** | `cd backend/worker` then `pip install -r requirements.txt` | Installs Celery, `psycopg2`, `boto3`, etc. |
+## 2) `.env.example` (place as `backend/.env.example` - copy to `.env` and populate)
 
-### 🛠️ FFmpeg Setup (Project Local)
+```
+# Redis
+REDIS_URL=redis://localhost:6379
 
-For reliable execution across environments, **FFmpeg must be installed locally in the project structure.**
+# Database
+DATABASE_URL=postgresql://keyframe_user:password@localhost:5432/keyframe_db
 
-1.  **Download:** Download the latest static FFmpeg executable (e.g., `ffmpeg-git-essentials.7z`) for Windows.
-2.  **Create Directory:** In the **root project directory** (`C:\Users\...\KeyFrame`), create a new folder named **`bin`**.
-3.  **Place Executable:** Extract the downloaded archive and copy **`ffmpeg.exe`** into the new **`bin/`** folder.
-4.  **Git Ignore:** Ensure your root `.gitignore` file contains the entry `/bin/` to prevent committing the binary.
+# Backend HTTP
+PORT=3001
+BACKEND_URL=http://localhost:3001
 
-**Note:** The Python worker code (`orchestrator.py`, `assemble.py`, `storage.py`) is already configured to look for `ffmpeg.exe` in this specific `/bin/` location.
+# Local output folder for job artifacts
+KEYFRAME_OUTPUT_DIR=C:\\tmp
+
+# FFmpeg override (optional)
+FFMPEG_PATH=./bin/ffmpeg.exe
+FFPROBE_PATH=./bin/ffprobe.exe
+
+# Third-party API keys (fill when required)
+OPENAI_API_KEY=
+NEBIUS_API_KEY=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+POLLY_VOICE=Joanna
+
+# Cloudflare R2 (optional)
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY=
+R2_SECRET_KEY=
+R2_BUCKET=
+```
+
+## 3) Quick Docker Compose (start Redis/Postgres locally)
+
+If you don't want to install Redis/Postgres system-wide, create a `docker-compose.yml` in the repo root with the following services and run `docker compose up -d`:
+
+```
+version: '3.8'
+services:
+	redis:
+		image: redis:7
+		ports:
+			- "6379:6379"
+
+	postgres:
+		image: postgres:15
+		environment:
+			POSTGRES_USER: keyframe_user
+			POSTGRES_PASSWORD: password
+			POSTGRES_DB: keyframe_db
+		ports:
+			- "5432:5432"
+		volumes:
+			- pgdata:/var/lib/postgresql/data
+
+volumes:
+	pgdata:
+```
+
+## 4) FFmpeg (Windows guidance)
+
+- Recommended: put `ffmpeg.exe` and `ffprobe.exe` in `./bin/` at the repository root.
+- Verify: `./bin/ffmpeg.exe -version` and `./bin/ffprobe.exe -version` or add `./bin` to your PATH.
+
+## 5) Install & run (local, non-Docker)
+
+Backend API
+
+```powershell
+cd backend/api
+npm install
+set PORT=3001
+node index.js
+```
+
+Python worker (Windows recommended steps)
+
+```powershell
+cd backend/worker
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+# Run Celery worker (Windows: use --pool=solo)
+set REDIS_URL=redis://localhost:6379
+celery -A app worker --loglevel=info --pool=solo
+```
+
+Note: `--pool=solo` is required on Windows to avoid multiprocessing errors in Celery.
+
+## 6) How the pieces fit
+
+- `backend/api` exposes HTTP routes used by the frontend: `/api/v1/generate`, `/api/v1/status/:jobId`, `/api/v1/feed`.
+- `backend/worker` listens for jobs (pushed to Redis) and runs `orchestrator.process_video_job` which produces images, TTS, assembles with FFmpeg, and writes outputs to `KEYFRAME_OUTPUT_DIR` and to `backend/api/public/videos/{jobId}`.
+
+## 7) Notes about ports / dev ergonomics
+
+- The frontend dev server defaults to port `3000` (Next.js). To avoid a conflict, the backend defaults to port `3001` (see `.env.example`). Adjust `PORT` if you prefer different ports.
+
+## 8) Troubleshooting (common issues)
+
+- `FileNotFoundError: ... ffmpeg.exe` — worker cannot find ffmpeg. Confirm `FFMPEG_PATH` in `.env` or that `./bin/ffmpeg.exe` exists.
+- `PermissionError` with Celery on Windows — run worker with `--pool=solo`.
+- Redis connection issues — ensure `REDIS_URL` is correct and Redis is running (or `docker compose up redis`).
+- DB migrations / schema — `backend/api` will attempt to create the `videos` table on startup; verify DB credentials in `DATABASE_URL`.
 
 ---
-
-## 2. Run Commands
-
-All services must run concurrently for end-to-end functionality.
-
-| Service | Directory to Run From | Command | Notes |
-| :--- | :--- | :--- | :--- |
-| **API Gateway** | `backend/api` | `node index.js` | Starts the server at `http://localhost:3000`. Initializes the PostgreSQL DB tables. |
-| **Worker Engine** | `backend/worker` | `celery -A app worker --loglevel=info --pool=solo` | **Windows Only:** `--pool=solo` is mandatory to fix multiprocessing errors. |
-| **Test Submission** | *Anywhere* (PowerShell) | `Invoke-RestMethod -Uri "http://localhost:3000/api/v1/generate" -Method POST -ContentType "application/json" -Body '{"prompt": "...", "style": "..."}'` | Triggers a job. |
-| **Access Local Video** | `backend/worker` | **Use path from Worker logs** | If using mock logic, locate the `video_url` path from the final Worker output, e.g.: `cp /tmp/.../final_video.mp4 ./my_video.mp4` |
-
----
-
-## 3. Project File Structure & Overview
-
-The backend is separated into two main concerns: API Gateway (Handling HTTP) and Worker (Handling AI/Media Processing).
-
-### API Gateway (`backend/api`)
-
-| Component | File Location | Brief Overview |
-| :--- | :--- | :--- |
-| **Server/Routes** | `index.js` | Initializes Express, mounts routes, starts server, and calls DB setup. |
-| **Database** | `database.js` | PostgreSQL connection logic: `insertJob`, `updateJobStatus`, `getRecentCompletedVideos`. |
-| **Queue** | `redis.js` | Redis connection logic: formats and pushes jobs to the Celery queue. |
-| **Endpoints** | `routes/*.js` | Defines the API endpoints for `/generate`, `/status`, and `/feed`. |
-
-### Worker Engine (`backend/worker`)
-
-| Component | File Location | Role in Pipeline |
-| :--- | :--- | :--- |
-| **App Entry** | `app.py` | Celery application definition and task discovery configuration. |
-| **Orchestrator** | `orchestrator.py` | The main Celery task (`process_video_job`) that manages the 7-step video generation workflow. |
-| **Scripting** | `script.py` | Calls **OpenAI** (GPT-4o-mini) to generate the script JSON. |
-| **Images** | `images_generated.py` | Calls **Nebius AI** (Flux-Schnell) to generate 10 video keyframes. |
-| **Voice-Over** | `voice_over.py` | Calls **Amazon Polly** to generate the narration audio. |
-| **Assembly** | `assemble.py` | Uses **FFmpeg** to stitch images, timings, and audio into a final MP4 video. |
-| **Storage** | `storage.py` | Uploads video/thumbnail to **Cloudflare R2** and handles local cleanup. |
-
----
-
-## 4. Troubleshooting Common Errors
-
-| Error | Cause | Solution |
-| :--- | :--- | :--- |
-| `FileNotFoundError: [WinError 2] the system cannot find the file specified` | The worker failed to find `ffmpeg.exe`. | Verify that `ffmpeg.exe` is located in the **root project directory's `/bin/` folder**. |
-| `PermissionError: Access is denied` | Celery's default multiprocessing pool fails on Windows. | Rerun the worker command with the **`--pool=solo`** argument. |
-| `SyntaxError: ...forgot a comma?` | Missing syntax (e.g., comma, closing parenthesis) in Python configuration (usually `app.py`). | Review Python syntax in `app.conf.update` or `Celery()` constructor. |
-| `ImportError: cannot import name 'process_video_job'` | Circular dependency between `app.py` and `orchestrator.py`. | Fixed by using Celery's `imports` setting and structuring imports correctly in both files. |
-| `ValueError: SSL connection... redis://` | Celery is configured for SSL, but the `REDIS_URL` uses the unencrypted `redis://` scheme. | Review `app.py` and comment out any code setting `broker_use_ssl` if using a non-SSL Redis instance. |

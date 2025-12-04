@@ -1,12 +1,12 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import styles from './Navbar.module.css';
+import Link from "next/link";
+import Image from "next/image";
+import styles from "./Navbar.module.css";
 
 interface NavbarProps {
   activePath?: string;
 }
 
-export function Navbar({ activePath = '/' }: NavbarProps) {
+export function Navbar({ activePath = "/" }: NavbarProps) {
   return (
     <nav className={styles.navbar}>
       {}
@@ -25,15 +25,27 @@ export function Navbar({ activePath = '/' }: NavbarProps) {
       <div className={styles.navLinks}>
         <Link
           href="/"
-          className={`${styles.navLink} ${activePath === '/' ? styles.active : ''}`}
+          className={`${styles.navLink} ${
+            activePath === "/" ? styles.active : ""
+          }`}
         >
           Generate
         </Link>
         <Link
           href="/feed"
-          className={`${styles.navLink} ${activePath === '/feed' ? styles.active : ''}`}
+          className={`${styles.navLink} ${
+            activePath === "/feed" ? styles.active : ""
+          }`}
         >
           Community
+        </Link>
+        <Link
+          href="/team"
+          className={`${styles.navLink} ${
+            activePath === "/team" ? styles.active : ""
+          }`}
+        >
+          Team
         </Link>
       </div>
     </nav>

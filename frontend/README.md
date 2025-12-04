@@ -1,61 +1,56 @@
 # KeyFrame Frontend
 
----
-
-## 1. Prereqs
-
-| Action | Command | Notes |
-| :--- | :--- | :--- |
-| **Prerequisite** | Install Node.js (v18+ recommended) | Ensures compatibility. |
-| **Setup** | `npm install` | Installs Next.js and required packages (`uuid`). |
-| **Run** | `npm run dev` | Starts the local server at **`http://localhost:3000`**. |
+This directory contains the Next.js frontend for KeyFrame. The project includes local mock API routes used during development and also supports pointing at the real backend API.
 
 ---
 
-## 2. Setup & Static Assets
+## 1) Prereqs
 
-Before running the app, you must place the following static files in the specified location for the design and mock API to function: Will still work if you don't.
+- Node.js v18+ (recommended)
+- `npm` (or `pnpm`/`yarn`) installed
 
-| File Type | Required Location | Purpose |
-| :--- | :--- | :--- |
-| **Logo** | `public/assets/Logo_Transparent.png` | Used by the Navbar and Home Page UI. |
-| **Mock Video** | `public/assets/videos/mock.mp4` | Simulates the final video output for the completion state. |
-| **Mock Thumbnail**| `public/assets/thumbnails/mock.jpg` | Used as the video poster for the mock output. |
+Install dependencies and run the dev server:
 
----
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-## 3. Project File Structure & Overview
+The dev server runs on `http://localhost:3000` by default.
 
-The project uses the **Next.js App Router** convention: **Folders define routes**, and the **`page.tsx` file defines the UI** for that route. All styling is done using **CSS Modules**.
+## 2) Assets
 
-### UI Pages (Frontend)
+Place optional static assets if you want the full visual polish (not required to run):
 
-| Route Path | File Location | Brief Overview |
-| :--- | :--- | :--- |
-| **`/`** | `src/app/page.tsx` | The **Home Page**. Contains the Splash Screen, the Prompt Form, and initiates the job submission. |
-| **`/status/[jobId]`** | `src/app/status/[jobId]/page.tsx` | The **Status/Waiting Page**. Handles continuous polling of the mock API, displays progress, and shows the mock video upon completion. |
-| **`/feed`** | `src/app/feed/page.tsx` | **Placeholder** page for the Community Videos feed. |
-| **`/team`** | `src/app/team/page.tsx` | **Placeholder** page for team information. |
+- `public/assets/Logo_Transparent.png` — site logo
+- `public/assets/videos/mock.mp4` — mock demo video used by example pages
+- `public/assets/thumbnails/mock.jpg` — mock thumbnail
 
-### API Mock Handlers (Local Backend)
+## 3) Mock API vs Real Backend
 
-These files simulate the Node.js API Gateway and are essential for local development testing.
+- The repo includes simple Next.js API routes under `src/app/api/v1/*` that return mock jobIds and simulated status. These are convenient for local UI development.
+- To use the real backend instead, point the frontend to your backend by setting `NEXT_PUBLIC_BACKEND_URL` in `frontend/.env.local`, for example:
 
-| API Endpoint | File Location | Role |
-| :--- | :--- | :--- |
-| **`/api/v1/generate`** | `src/app/api/v1/generate/route.js` | Receives the prompt and instantly returns a mock `jobId` (`HTTP 202`). |
-| **`/api/v1/status/[id]`** | `src/app/api/v1/status/[jobId]/route.js` | Cycles through **QUEUED** → **PROCESSING** → **COMPLETE** statuses to simulate job progress. |
-| **`/api/v1/feed`** | `src/app/api/v1/feed/route.js` | Returns mock data for the "While You Wait" Community Feed. |
+```
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+```
 
----
+Then update client fetch calls to use `process.env.NEXT_PUBLIC_BACKEND_URL` (the code already prefers `NEXT_PUBLIC_BACKEND_URL` if present). If you run Next dev and keep the built-in API routes, local routes will take precedence — remove or rename the mock routes if you want all calls to go to the real backend.
 
-## 4. Pull Request
+## 4) File structure & pages
 
-### Linting (Before Pull Request)
+- `/` — `src/app/page.tsx` (home + prompt form)
+- `/status/[jobId]` — `src/app/status/[jobId]/page.tsx` (job progress + playback)
+- `/feed` — `src/app/feed/page.tsx` (community thumbnails)
 
-**Always run linting** before submitting a Pull Request to ensure code quality and consistency.
+## 5) Linting
 
-| Action | Command |
-| :--- | :--- |
-| **Lint Check** | `npm run lint` |
-| **Lint Fix** | `npm run lint -- --fix` |
+Run the linter before creating PRs:
+
+```powershell
+cd frontend
+npm run lint
+# auto-fix
+npm run lint -- --fix
+```

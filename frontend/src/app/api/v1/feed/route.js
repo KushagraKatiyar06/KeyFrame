@@ -1,29 +1,20 @@
 import { NextResponse } from 'next/server';
 
-const mockFeedData = [
-    {
-        id: 'mock-1',
-        title: 'How to Integrate',
-        style: 'Educational',
-        thumbnailUrl: '/thumbnails/mock_integrals.png',
-        videoUrl: '/videos/mock_integrals.mp4',
-    },
-    {
-        id: 'mock-2',
-        title: 'How I Won my First Fortnite Game',
-        style: 'Storytelling',
-        thumbnailUrl: '/thumbnails/mock_fortnite.png',
-        videoUrl: '/videos/mock_fortnite.mp4',
-    },
-    {
-        id: 'mock-3',
-        title: 'The Greatest Meme of All Time',
-        style: 'Meme',
-        thumbnailUrl: '/thumbnails/mock_meme.png',
-        videoUrl: '/videos/mock_meme.mp4',
-    },
-];
-
+//Proxy to backend API
 export async function GET() {
-    return NextResponse.json(mockFeedData, { status: 200 });
+    try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+        const response = await fetch(`${backendUrl}/api/v1/feed`);
+
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data, { status: 200 });
+    } catch (error) {
+        console.error('Error fetching from backend:', error);
+        //Returns empty feed instead of error to prevent UI breakk
+        return NextResponse.json({ success: true, count: 0, videos: [] }, { status: 200 });
+    }
 }

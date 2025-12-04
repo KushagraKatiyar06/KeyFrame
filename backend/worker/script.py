@@ -35,7 +35,7 @@ def generate_script(prompt, style):
         'Default' : f"""Create a basic video that follows the prompt"""
     }
 
-    # ontext for chatgpt to correctly return json data for image/tts generation
+    #ontext for chatgpt to correctly return json data for image/tts generation
     chatgpt_prompt = f"""You are viral content creator specializing in short form content. Generate a compelling, engaging script.
     style: {style}, style instructions: {style_instructions.get(style, style_instructions['Default'])}. Generate exactly {image_count.get(style, image_count['Default'])} image prompts and {tts_count.get(style, tts_count['Default'])} narration prompts.
     the overall word count for the entire script should be {narration_word_count.get(style, narration_word_count['Default'])}. Each slide has three components. 1. narration_prompt: the exact spoken text for this slide
@@ -121,8 +121,12 @@ def generate_script(prompt, style):
         print(f"Total slides: {len(script_json['slides'])}")
         print(f"Total duration: {total_duration} seconds\n")
 
-        if total_duration < 55 or total_duration > 65:
-            print(f"WARNING: Video is {total_duration} seconds long, which is outside the ideal range.")
+        #Style-specific duration validation
+        expected_duration = video_length.get(style, video_length['Default'])
+        tolerance = 10  #Allows for a 10 seconds variance
+
+        if total_duration < (expected_duration - tolerance) or total_duration > (expected_duration + tolerance):
+            print(f"WARNING: {style} video is {total_duration} seconds long, expected ~{expected_duration}s (±{tolerance}s)")
 
         return script_json
     

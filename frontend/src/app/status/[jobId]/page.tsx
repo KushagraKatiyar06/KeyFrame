@@ -1,8 +1,6 @@
-// src/app/status/[jobId]/page.tsx
-
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import Image from 'next/image';
 import styles from '../Status.module.css';
 import { Navbar } from '../../components/Navbar';
@@ -25,17 +23,18 @@ interface FeedVideo {
 }
 
 
-export default function StatusPage({ params }: { params: { jobId: string } }) {
+export default function StatusPage({ params }: { params: Promise<{ jobId: string }> }) {
+    //Unwraps params using React.use()
+    const unwrappedParams = use(params);
+    const jobId = unwrappedParams.jobId;
 
     const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
     const [feed, setFeed] = useState<FeedVideo[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isFeedOpen, setIsFeedOpen] = useState(true);
 
-    // Keep the delay state for a smooth transition from submission
+    //Keeps the delay state for a smooth transition from submission
     const [isAwaitingInitialStatus, setIsAwaitingInitialStatus] = useState(true);
-
-    const jobId = params.jobId;
 
 
     const fetchStatus = useCallback(async () => {
@@ -72,20 +71,15 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
 
 
     useEffect(() => {
-
-        // Use a ref to hold the interval ID so it persists across renders
-        // and can be cleared in the main cleanup phase.
         let intervalId: NodeJS.Timeout | undefined;
 
-        // --- FIX 1: Polling Loop Control ---
-        // This function runs only when jobStatus, fetchStatus, or fetchFeed changes.
-
-        // If job is already done, clean up any residual timers and STOP here.
+        
+        //If job is already done:
         if (jobStatus?.status === 'COMPLETE' || jobStatus?.status === 'ERROR') {
             return () => { }; // Return an empty cleanup function, essentially stopping the loop.
         }
 
-        // 1. Initial Delay Timer (2 seconds)
+        // 1.Initial Delay Timer (2 seconds)
         const initialDelayTimer = setTimeout(() => {
             setIsAwaitingInitialStatus(false);
 
@@ -106,7 +100,6 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
             }
         };
 
-        // Dependencies remain the same, triggering the effect when status changes
     }, [fetchStatus, fetchFeed, jobStatus?.status]);
 
 
@@ -145,7 +138,6 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
         </div>
     );
 
-    // RENDER 1: COMPLETE STATE 
     if (jobStatus?.status === 'COMPLETE' && jobStatus.videoUrl) {
         return (
             <>
@@ -177,9 +169,7 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                                 />
 
 
-                                {/* REMOVED PENCIL ICON (EDIT BUTTON) */}
-
-                                <a
+                                                                <a
                                     href={jobStatus.videoUrl}
                                     download={`keyframe-video-${jobId}.mp4`}
                                     className={styles.iconButton}
@@ -199,10 +189,9 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
     }
 
 
-    // RENDER 2: PROCESSING STATE (Combined logic)
+    // RENDER 2: PROCESSING STATE
     return (
         <>
-            {/* NAV BAR REMOVED FROM PROCESSING STATE */}
             <main className={styles.mainContainer}>
 
                 <div className={styles.processArea}>
@@ -221,16 +210,13 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                         FILMING, NARRATING, KEYFRAMING... PLEASE WAIT
                     </p>
 
-                    {/* Progress Bar (Simulated Loading Bar) */}
                     <div className={styles.progressBarContainer}>
-                        {/* Progress fill */}
                         <div
                             className={styles.progressBarFill}
                             style={{ width: `${jobStatus ? jobStatus.progress : 0}%` }}
                         ></div>
                     </div>
 
-                    {/* Detailed Status (Optional, useful for debugging) */}
                     <p className={styles.detailStatus}>
                         Status: {jobStatus ? jobStatus.status : 'Loading...'} ({jobStatus?.progress}%)
                     </p>
@@ -238,7 +224,7 @@ export default function StatusPage({ params }: { params: { jobId: string } }) {
                     {error && <p className={styles.errorText}>{error}</p>}
                 </div>
 
-                {/* The Community Feed with Collapse/Expand  */}
+                {/*The Community Feed with Collapse/Expand */}
                 <CommunityFeedView />
             </main>
         </>

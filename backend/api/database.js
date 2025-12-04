@@ -110,16 +110,23 @@ async function getJobById(id){
 //gets the last 15 completed videos for the feed (5 from each category)
 async function getRecentCompletedVideos() {
   const query = `
-    WITH ranked_videos AS (
-      SELECT
-        id, prompt, style, video_url, thumbnail_url, created_at,
-        ROW_NUMBER() OVER (PARTITION BY style ORDER BY created_at DESC) as rn
-      FROM videos
-      WHERE status = 'done'
-    )
-    SELECT id, prompt, style, video_url, thumbnail_url, created_at
-    FROM ranked_videos
-    WHERE rn <= 5
+    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
+     FROM videos
+     WHERE status = 'done' AND style = 'Educational'
+     ORDER BY created_at DESC
+     LIMIT 5)
+    UNION ALL
+    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
+     FROM videos
+     WHERE status = 'done' AND style = 'Meme'
+     ORDER BY created_at DESC
+     LIMIT 5)
+    UNION ALL
+    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
+     FROM videos
+     WHERE status = 'done' AND style = 'Storytelling'
+     ORDER BY created_at DESC
+     LIMIT 5)
     ORDER BY created_at DESC;
   `;
 

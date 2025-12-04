@@ -1,52 +1,121 @@
-.header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(5px);
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 3rem;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 87, 87, 0.2);
+  z-index: 1000;
 }
 
-.nav {
-    max-width: 1280px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0 1rem;
-    height: 5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+/* Left side - Logo */
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: transform 0.3s ease;
 }
 
+.logoLink:hover {
+  transform: scale(1.05);
+}
 
 .logoContainer {
-    margin-right: 1rem;
-    margin-left: -16rem;
+  width: 48px;
+  height: 48px;
+  position: relative;
+  cursor: pointer;
 }
 
+/* Right side - Nav Links */
 .navLinks {
-    display: flex;
-    gap: 2rem;
-    font-size: 1.125rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    margin-right: -14rem;
-    font-family: 'LOVELO';
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
 }
 
 .navLink {
-    transition: color 0.15s ease-in-out;
-    color: white;
-    text-decoration: none;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0.5rem 0;
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #FF5757;
+  transition: width 0.3s ease;
 }
 
 .navLink:hover {
-    color: #FFC8D2;
+  color: #ffffff;
 }
 
-.activeLink {
-    color: white;
-    border-bottom: 2px solid #FFC8D2;
-    padding-bottom: 0.25rem;
+.navLink:hover::after {
+  width: 100%;
+}
+
+.navLink.active {
+  color: #FF5757;
+}
+
+.navLink.active::after {
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 1.5rem;
+    height: 70px;
+  }
+
+  .logoContainer {
+    width: 40px;
+    height: 40px;
+  }
+
+  .navLinks {
+    gap: 1.5rem;
+  }
+
+  .navLink {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 1rem;
+    height: 60px;
+  }
+
+  .logoContainer {
+    width: 36px;
+    height: 36px;
+  }
+
+  .navLinks {
+    gap: 1rem;
+  }
+
+  .navLink {
+    font-size: 0.85rem;
+  }
 }

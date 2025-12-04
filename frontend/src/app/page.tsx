@@ -1,5 +1,3 @@
-// src/app/api/v1/generate/route.js
-
 "use client";
 
 import { useState } from 'react';
@@ -7,20 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Navbar } from './components/Navbar';
+import { ParticleBackground } from './components/ParticleBackground';
 import styles from './Home.module.css';
 
 
-// The Initial Landing Splash 
 const SplashSection = () => (
   <section className={styles.splashSection}>
     <div className={styles.topContentWrapper}>
-      {/* Main Logo (Image) */}
       <div className={styles.mainLogo}>
         <Image
           src="/assets/Logo_Transparent.png"
           alt="KeyFrame Logo"
-          width={128}
-          height={128}
+          width={200}
+          height={200}
+          priority
         />
       </div>
 
@@ -52,7 +50,7 @@ const SplashSection = () => (
   </section>
 );
 
-// The Prompt Input Area 
+//The Prompt Input Area 
 const PromptSection = () => {
 
   const [prompt, setPrompt] = useState('');
@@ -99,18 +97,17 @@ const PromptSection = () => {
   return (
     <section id="prompt-section" className={styles.promptSection}>
       <div className={styles.promptContainer}>
-        {/* Main Logo in the Prompt Section */}
         <div className={styles.promptSectionLogo}>
           <Image
             src="/assets/Logo_Transparent.png"
             alt="KeyFrame Logo"
-            width={128}
-            height={128}
+            width={100}
+            height={100}
           />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Prompt Entry Area */}
+        <form onSubmit={handleSubmit} className={styles.promptForm}>
+          {/*Prompt Entry Area*/}
           <textarea
             id="prompt"
             rows={4}
@@ -122,9 +119,9 @@ const PromptSection = () => {
             required
           />
 
-          {/* Mode Selection and Generate Button Area */}
+          {/*Mode Selection and Generate Button Area*/}
           <div className={styles.controls}>
-            {/* Style Buttons */}
+            {/*Style Buttons*/}
             <div className={styles.styleButtons}>
               {stylesList.map((s) => (
                 <button
@@ -140,7 +137,7 @@ const PromptSection = () => {
               ))}
             </div>
 
-            {/* Submission Button */}
+            {/*Submission Button*/}
             <button
               type="submit"
               className={styles.submitButton}
@@ -160,7 +157,7 @@ const PromptSection = () => {
             </button>
           </div>
 
-          {/* Error Display */}
+          {/*displays error message*/}
           {error && (
             <p className={styles.error}>{error}</p>
           )}
@@ -170,11 +167,12 @@ const PromptSection = () => {
   );
 };
 
-// --- Main Page Component ---
+//Main page component
 export default function Home() {
   return (
-    <main>
-      <Navbar />
+    <main className={styles.pageWrapper}>
+      <ParticleBackground />
+      <Navbar activePath="/" />
       <SplashSection />
       <PromptSection />
     </main>

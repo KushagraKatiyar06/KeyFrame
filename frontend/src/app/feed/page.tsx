@@ -31,7 +31,8 @@ export default function Feed() {
         throw new Error('Failed to fetch feed videos');
       }
       const data = await response.json();
-      setVideos(data);
+      //Backend returns { success, count, videos: [...]}
+      setVideos(data.videos || data);
     } catch (err) {
       setError('Failed to load community videos');
       console.error(err);

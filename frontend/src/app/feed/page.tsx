@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { Navbar } from '../components/Navbar';
 import { ParticleBackground } from '../components/ParticleBackground';
 import styles from './Feed.module.css';
@@ -12,6 +11,17 @@ interface Video {
   style: string;
   thumbnailUrl: string;
   videoUrl: string;
+}
+
+interface BackendVideo {
+  id: string;
+  prompt?: string;
+  title?: string;
+  style: string;
+  thumbnail_url?: string;
+  thumbnailUrl?: string;
+  video_url?: string;
+  videoUrl?: string;
 }
 
 export default function Feed() {
@@ -35,7 +45,7 @@ export default function Feed() {
       const rawVideos = data.videos || data;
 
       //Transforms the backend format to frontend format
-      const transformedVideos = rawVideos.map((video: any) => ({
+      const transformedVideos = rawVideos.map((video: BackendVideo) => ({
         id: video.id,
         title: video.prompt || video.title, //Use prompt as title to show in feed (but cuts it off at a certain point)
         style: video.style,

@@ -105,7 +105,6 @@
   position: relative;
   z-index: 2;
 }
-
 .promptContainer {
   max-width: 1000px;
   width: 100%;
@@ -212,7 +211,7 @@
   cursor: not-allowed;
 }
 
-/*Submit button*/
+/*the Submit button for the video*/
 .submitButton {
   padding: 1.25rem 4rem;
   background: #FF5757;
@@ -259,7 +258,7 @@
   }
 }
 
-/*An Error message*/
+/*An Error message, if there is an error that occured (fallback)*/
 .error {
   color: #ff6b6b;
   text-align: center;

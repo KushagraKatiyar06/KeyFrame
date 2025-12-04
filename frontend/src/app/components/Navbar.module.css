@@ -14,7 +14,6 @@
   z-index: 1000;
 }
 
-/* Left side - Logo */
 .logoLink {
   display: flex;
   align-items: center;
@@ -33,7 +32,6 @@
   cursor: pointer;
 }
 
-/* Right side - Nav Links */
 .navLinks {
   display: flex;
   gap: 2.5rem;
@@ -79,7 +77,6 @@
   width: 100%;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .navbar {
     padding: 0 1.5rem;

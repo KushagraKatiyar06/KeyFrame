@@ -77,7 +77,7 @@ export const ParticleBackground = () => {
         particle.draw(ctx);
       });
 
-      // Draw connections between nearby particles
+      //This draws lines between particles that are close to each other
       particles.forEach((p1, i) => {
         particles.slice(i + 1).forEach(p2 => {
           const dx = p1.x - p2.x;

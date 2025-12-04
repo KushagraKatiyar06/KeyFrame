@@ -1,5 +1,3 @@
-// src/app/api/v1/feed/route.js
-
 import { NextResponse } from 'next/server';
 
 const mockFeedData = [

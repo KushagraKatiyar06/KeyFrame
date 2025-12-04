@@ -12,16 +12,16 @@ router.get('/:id',async(req, res) => {
         error: 'Job ID is required' 
       });}
 
-    // gets the job from postgres
+    //gets the job from postgres
     const job= await db.getJobById(id);
 
-    // if job doesn't exist, return 404
+    //if job doesn't exist, return 404, and frontend will print an error
     if (!job) {
       return res.status(404).json({ 
         error: 'Job not found' 
       });
     }
-    // return the job data
+    //returns the job data
     res.status(200).json({
       id: job.id,
       prompt: job.prompt,

@@ -63,7 +63,6 @@ async function insertJob(prompt, style) {
 
 //updates the job status and optionally the video/thumbnail urls
 async function updateJobStatus(id, status, videoUrl = null, thumbnailUrl = null) {
-  //COALESCE keeps the old value if the new one is null
   const query = `
     UPDATE videos
     SET status = $1,
@@ -108,14 +107,20 @@ async function getJobById(id){
     throw error;
   }
 }
-//gets the last 20 completed videos for the feed
+//gets the last 15 completed videos for the feed (5 from each category)
 async function getRecentCompletedVideos() {
   const query = `
+    WITH ranked_videos AS (
+      SELECT
+        id, prompt, style, video_url, thumbnail_url, created_at,
+        ROW_NUMBER() OVER (PARTITION BY style ORDER BY created_at DESC) as rn
+      FROM videos
+      WHERE status = 'done'
+    )
     SELECT id, prompt, style, video_url, thumbnail_url, created_at
-    FROM videos
-    WHERE status = 'done'
-    ORDER BY created_at DESC
-    LIMIT 20;
+    FROM ranked_videos
+    WHERE rn <= 5
+    ORDER BY created_at DESC;
   `;
 
   try {

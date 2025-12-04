@@ -2,32 +2,27 @@
 import { NextResponse } from 'next/server';
 
 export async function GET(request, { params }) {
-    const jobId = params.jobId;
+    const unwrappedParams = await params;
+    const jobId = unwrappedParams.jobId;
 
-    const pollCount = Math.floor(Date.now() / 5000) % 5;
+    try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
-    let status = 'QUEUED';
-    let progress = 10;
-    let videoUrl = null;
-    let thumbnailUrl = null;
+        const response = await fetch(`${backendUrl}/api/v1/status/${jobId}`);
 
-    if (pollCount >= 1 && pollCount <= 3) {
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
+        }
 
-        status = 'PROCESSING';
-        progress = 10 + (pollCount * 20);
-    } else if (pollCount >= 4) {
-
-        status = 'COMPLETE';
-        progress = 100;
-        videoUrl = `/videos/mock_meme.mp4`;
-        thumbnailUrl = `/thumbnails/mock_meme.png`;
+        const data = await response.json();
+        return NextResponse.json(data, { status: 200 });
+    } catch (error) {
+        console.error('Error fetching status from backend:', error);
+        return NextResponse.json({
+            error: 'Failed to get job status',
+            jobId,
+            status: 'ERROR',
+            progress: 0
+        }, { status: 500 });
     }
-
-    return NextResponse.json({
-        jobId,
-        status,
-        progress,
-        videoUrl,
-        thumbnailUrl,
-    }, { status: 200 });
 }

@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request) {
+    try {
+        const body = await request.json();
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
 
-    await request.json();
-    const jobId = uuidv4();
+        const response = await fetch(`${backendUrl}/api/v1/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
 
-    return NextResponse.json(
-        {
-            jobId: jobId,
-            message: 'Job received. Check status endpoint for updates.',
-        },
-        { status: 202 }
-    );
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data, { status: 202 });
+    } catch (error) {
+        console.error('Error submitting job to backend:', error);
+        return NextResponse.json(
+            { error: 'Failed to submit job' },
+            { status: 500 }
+        );
+    }
 }

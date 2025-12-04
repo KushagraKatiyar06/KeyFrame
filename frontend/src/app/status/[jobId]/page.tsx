@@ -62,8 +62,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
             if (!res.ok) {
                 throw new Error(`Feed fetch failed: ${res.status}`);
             }
-            const data: FeedVideo[] = await res.json();
-            setFeed(data);
+            const data = await res.json();
+            //Backend returns { success, count, videos: [...]}
+            const videos = data.videos || data;
+            setFeed(Array.isArray(videos) ? videos : []);
         } catch (err) {
             console.error("Feed error:", err);
         }
@@ -118,12 +120,11 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                     {feed.map((video) => (
                         <div key={video.id} className={styles.videoCard}>
                             <div className={styles.thumbnail}>
-                                <Image
-                                    src="/assets/thumbnails/mock.jpg"
-                                    alt={`Thumbnail for ${video.title}`}
-                                    width={300}
-                                    height={180}
-                                    style={{ width: '100%', height: 'auto' }}
+                                <video
+                                    src={video.videoUrl}
+                                    className={styles.videoThumbnail}
+                                    preload="metadata"
+                                    muted
                                 />
                             </div>
                             <div className={styles.cardDetails}>

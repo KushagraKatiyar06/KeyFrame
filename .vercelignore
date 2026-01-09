@@ -1,0 +1,9 @@
+# Ignore backend and worker directories
+backend/
+bin/
+
+# Ignore node modules not in frontend
+node_modules/
+
+# Keep frontend for deployment
+!frontend/

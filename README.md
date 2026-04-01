@@ -57,9 +57,13 @@ CLOUDFLARE_ACCESS_KEY_ID=
 CLOUDFLARE_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
 R2_PUBLIC_DOMAIN=
+
+# FFmpeg paths (optional — overrides the default bin/ fallback)
+FFMPEG_PATH=
+FFPROBE_PATH=
 ```
 
-> **Note:** FFmpeg is **not** configured via env vars. The worker hardcodes the path to `<repo-root>/bin/ffmpeg.exe`. You must place `ffmpeg.exe` and `ffprobe.exe` in a `bin/` folder at the repository root (see FFmpeg section below).
+> **Note:** FFmpeg path is configurable via `FFMPEG_PATH` and `FFPROBE_PATH` env vars (see FFmpeg section below). If these are not set, the worker falls back to `<repo-root>/bin/ffmpeg.exe`.
 
 ## 3) Quick Docker Compose (start Redis/Postgres locally)
 
@@ -90,9 +94,24 @@ volumes:
 
 ## 4) FFmpeg (Windows guidance)
 
-The worker code hardcodes the FFmpeg path to `<repo-root>/bin/ffmpeg.exe` — it is **not** overridable via environment variables.
+The worker reads `FFMPEG_PATH` and `FFPROBE_PATH` from the `.env` file. If these are not set, it falls back to `<repo-root>/bin/ffmpeg.exe`.
 
-1. Download a Windows FFmpeg build from [https://www.gyan.dev/ffmpeg/builds/](https://www.gyan.dev/ffmpeg/builds/) (get the "essentials" release build)
+**Recommended: install via winget (handles updates and PATH automatically)**
+
+```powershell
+winget install Gyan.FFmpeg
+where ffmpeg   # copy the output path
+```
+
+Then set in `backend/worker/.env`:
+```
+FFMPEG_PATH=C:\Users\<you>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg-...\bin\ffmpeg.exe
+FFPROBE_PATH=C:\Users\<you>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg-...\bin\ffprobe.exe
+```
+
+**Alternative: manual install**
+
+1. Download a Windows build from [https://www.gyan.dev/ffmpeg/builds/](https://www.gyan.dev/ffmpeg/builds/) (get the "essentials" release build)
 2. Extract and copy `ffmpeg.exe` and `ffprobe.exe` into a `bin/` folder at the repository root:
    ```
    KeyFrame.v1/
@@ -103,6 +122,13 @@ The worker code hardcodes the FFmpeg path to `<repo-root>/bin/ffmpeg.exe` — it
 3. Verify: `./bin/ffmpeg.exe -version`
 
 > The `bin/` folder is git-ignored, so you need to do this on every fresh clone.
+
+**Windows Smart App Control / AppLocker note**
+
+If you get `[WinError 4551] An Application Control policy has blocked this file` when the worker tries to run FFmpeg, Windows Smart App Control is blocking the subprocess. Fix:
+
+- Go to **Settings → Windows Security → App & Browser Control → Smart App Control** and set it to **Off**, then restart.
+- If you're on a managed/enterprise machine, ask IT to allowlist the FFmpeg binary.
 
 ## 5) Install & run (local, non-Docker)
 

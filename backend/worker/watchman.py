@@ -11,10 +11,16 @@ def preflight(job_id):
     print("Watchman: all pre-flight checks passed.\n")
 
 def _check_ffmpeg():
+    import shutil
+    import subprocess
     FFMPEG_PATH = os.getenv('FFMPEG_PATH') or os.path.abspath(
         os.path.join(os.path.dirname(__file__), '..', '..', 'bin', 'ffmpeg.exe')
     )
-    if not os.path.exists(FFMPEG_PATH):
+    # if it's a plain command name (not a path), check PATH
+    if not os.path.isabs(FFMPEG_PATH) and not os.path.exists(FFMPEG_PATH):
+        if shutil.which(FFMPEG_PATH) is None:
+            raise Exception(f"Watchman: FFmpeg not found at {FFMPEG_PATH}")
+    elif os.path.isabs(FFMPEG_PATH) and not os.path.exists(FFMPEG_PATH):
         raise Exception(f"Watchman: FFmpeg not found at {FFMPEG_PATH}")
     print(f"Watchman: FFmpeg verified at {FFMPEG_PATH}")
 

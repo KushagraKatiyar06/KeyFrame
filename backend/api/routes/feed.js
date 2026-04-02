@@ -4,8 +4,8 @@ const db = require('../database');
 
 router.get('/', async (req,res) =>{
   try {
-    //get the last 20 completed videos from postgres
-    const videos = await db.getRecentCompletedVideos();
+    const search = req.query.search || null;
+    const videos = await db.getRecentCompletedVideos(search);
 
     //return the videos array
     res.status(200).json({

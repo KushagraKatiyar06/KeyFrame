@@ -25,6 +25,7 @@ router.get('/:id',async(req, res) => {
     res.status(200).json({
       id: job.id,
       prompt: job.prompt,
+      title: job.title || null,
       style: job.style,
       status: job.status,
       video_url: job.video_url,
@@ -37,6 +38,22 @@ router.get('/:id',async(req, res) => {
     res.status(500).json({ 
       error: 'Failed to get job status' 
     });
+  }
+});
+
+// PATCH /api/v1/status/:id/title — save video title from the done screen
+router.patch('/:id/title', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'title is required' });
+    }
+    await db.updateVideoTitle(id, title.trim());
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving title:', error);
+    res.status(500).json({ error: 'Failed to save title' });
   }
 });
 

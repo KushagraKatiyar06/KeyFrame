@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -50,16 +50,22 @@ const SplashSection = () => (
   </section>
 );
 
-//The Prompt Input Area 
+//The Prompt Input Area
 const PromptSection = () => {
 
   const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('Educational');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quota, setQuota] = useState<{ used: number; limit: number; remaining: number; resetsInSeconds: number } | null>(null);
 
   const router = useRouter();
-  const stylesList = ['Educational', 'Meme', 'Storytelling'];
+
+  useEffect(() => {
+    fetch('/api/v1/quota')
+      .then(r => r.json())
+      .then(setQuota)
+      .catch(() => {});
+  }, []);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,12 +83,18 @@ const PromptSection = () => {
       const response = await fetch('/api/v1/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, style }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (response.status === 202) {
         const data = await response.json();
         router.push(`/status/${data.jobId}`);
+      } else if (response.status === 429) {
+        const data = await response.json();
+        const hrs = Math.floor((data.resetsInSeconds || 0) / 3600);
+        const mins = Math.floor(((data.resetsInSeconds || 0) % 3600) / 60);
+        setError(`Daily limit reached — resets in ${hrs}h ${mins}m. Check back tomorrow!`);
+        setQuota(q => q ? { ...q, remaining: 0 } : q);
       } else {
         setError('Failed to start video generation. Received status: ' + response.status);
       }
@@ -119,29 +131,30 @@ const PromptSection = () => {
             required
           />
 
-          {/*Mode Selection and Generate Button Area*/}
-          <div className={styles.controls}>
-            {/*Style Buttons*/}
-            <div className={styles.styleButtons}>
-              {stylesList.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStyle(s)}
-                  className={`${styles.styleButton} ${style === s ? styles.selected : ''
-                    }`}
-                  disabled={isLoading}
-                >
-                  {s}
-                </button>
-              ))}
+          {/*Daily quota indicator*/}
+          {quota && (
+            <div className={styles.quotaBar}>
+              <div className={styles.quotaTrack}>
+                <div
+                  className={styles.quotaFill}
+                  style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }}
+                />
+              </div>
+              <span className={styles.quotaLabel}>
+                {quota.remaining === 0
+                  ? `Daily limit reached — resets in ${Math.floor(quota.resetsInSeconds / 3600)}h ${Math.floor((quota.resetsInSeconds % 3600) / 60)}m`
+                  : `${quota.used} / ${quota.limit} videos generated. This is a global limit for everyone please don't bankrupt me. <3`}
+              </span>
             </div>
+          )}
 
+          {/*Generate Button Area*/}
+          <div className={styles.controls}>
             {/*Submission Button*/}
             <button
               type="submit"
               className={styles.submitButton}
-              disabled={isLoading}
+              disabled={isLoading || (quota?.remaining === 0)}
             >
               {isLoading ? (
                 <>

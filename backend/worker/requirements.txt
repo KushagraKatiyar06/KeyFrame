@@ -3,8 +3,7 @@ python-dotenv
 psycopg2-binary
 redis
 openai
-boto3 
+boto3
 requests
-mutagen 
-
+mutagen
 

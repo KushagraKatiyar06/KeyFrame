@@ -1,6 +1,8 @@
 import os
+import html
 import tempfile
 import boto3
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 import subprocess
 import random
@@ -19,15 +21,16 @@ def get_audio_duration_mutagen(path):
 # fallback audio duration extraction
 def get_audio_duration_ffprobe(path):
     try:
+        FFPROBE_PATH = os.getenv('FFPROBE_PATH') or os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'bin', 'ffprobe.exe'))
         cmd = [
-            'ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries',
+            FFPROBE_PATH, '-v', 'error', '-select_streams', 'a:0', '-show_entries',
             'stream=duration', '-of', 'default=noprint_wrappers=1:nokey=1', path
         ]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return float(result.stdout.strip())
     except Exception:
         return None
-    
+
 def get_audio_duration(path):
     result = get_audio_duration_mutagen(path)
 
@@ -37,46 +40,71 @@ def get_audio_duration(path):
         result = get_audio_duration_ffprobe(path)
         if result:
             return result
-    
+
     print("Error recieving audio duration.")
     return None
 
-# main tts generation method
-def generate_voice_over(script_json, job_id, temp_dir):
+def _wrap_ssml(narration):
+    """Wraps narration text in SSML with faster prosody rate."""
+    safe = html.escape(narration)
+    return f'<speak><prosody rate="120%">{safe}</prosody></speak>'
+
+# main tts generation method — voice is now per-slide from script_json
+def generate_voice_over(script_json, job_id, temp_dir, style=None):
     print("Beginning voice over generation...\n\n")
-    
+
     polly = boto3.client(
         'polly',
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        region_name=os.getenv('AWS_REGION', 'us-east-1')
+        region_name=os.getenv('AWS_REGION', 'us-east-1'),
+        config=Config(connect_timeout=10, read_timeout=30)
     )
 
     slides = script_json.get('slides', [])
 
-    # randomize voices
-    print("1. Setting voice...")
+    print("1. Voice assignments per slide:")
+    for i, slide in enumerate(slides):
+        print(f"   Slide {i+1}: {slide.get('voice_id', 'Matthew')}")
 
-    VOICE_IDS = ['Joanna', 'Matthew', 'Kendra', 'Amy', 'Justin']
-    random_voice = random.choice(VOICE_IDS)
-
-    print("2. Generating all voiceovers in parallel (polly api calls)... \n")
+    print("\n2. Generating all voiceovers in parallel (polly api calls)... \n")
     os.makedirs(temp_dir, exist_ok=True)
 
     try:
-        # Function to generate a single voiceover
         def generate_single_voiceover(i, slide):
             narration = slide.get('narration_prompt', '')
-            print(f"{i}. Polly: narrating slide {i + 1}/{len(slides)}... ({len(narration)} chars)")
+            voice_id = slide.get('voice_id', 'Matthew')
+            ssml_text = _wrap_ssml(narration)
 
-            # api call to amazon polly
-            response = polly.synthesize_speech(
-                Text = narration,
-                TextType = 'text',
-                OutputFormat = 'mp3',
-                VoiceId = random_voice,
-                Engine='standard'
-            )
+            print(f"{i+1}. Polly: narrating slide {i+1}/{len(slides)} with {voice_id} ({len(narration)} chars)")
+
+            # try generative engine with SSML, fall back to neural, then plain text
+            try:
+                response = polly.synthesize_speech(
+                    Text=ssml_text,
+                    TextType='ssml',
+                    OutputFormat='mp3',
+                    VoiceId=voice_id,
+                    Engine='generative'
+                )
+            except Exception:
+                try:
+                    response = polly.synthesize_speech(
+                        Text=ssml_text,
+                        TextType='ssml',
+                        OutputFormat='mp3',
+                        VoiceId=voice_id,
+                        Engine='neural'
+                    )
+                except Exception:
+                    # final fallback: plain text with neural
+                    response = polly.synthesize_speech(
+                        Text=narration,
+                        TextType='text',
+                        OutputFormat='mp3',
+                        VoiceId=voice_id,
+                        Engine='neural'
+                    )
 
             audio_stream = response.get('AudioStream')
             if not audio_stream:
@@ -111,29 +139,16 @@ def generate_voice_over(script_json, job_id, temp_dir):
             slide_paths.append(path)
             slide_durations.append(duration)
 
-        # concatenate slide mp3s into one file using ffmpeg concat demuxer
+        # concatenate slide mp3s into one file using pure Python binary concat
         print("\n3. Concatenating slide mp3s into one...")
 
-        concat_list = os.path.join(temp_dir, 'audio_concat.txt')
-        with open(concat_list, 'w', encoding='utf-8') as f:
-            for p in slide_paths:
-                f.write(f"file '{p}'\n")
-
         full_audio = os.path.join(temp_dir, 'voiceover_full.mp3')
-        FFMPEG = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'bin', 'ffmpeg.exe'))
-
-        cmd = [
-            FFMPEG,
-            '-y',
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', concat_list,
-            '-c', 'copy',
-            full_audio
-        ]
 
         print("Concatenating slide audio into full voiceover...")
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        with open(full_audio, 'wb') as outfile:
+            for p in slide_paths:
+                with open(p, 'rb') as infile:
+                    outfile.write(infile.read())
 
         # final sanity check
         print("4. Final tts checks...")
@@ -149,11 +164,6 @@ def generate_voice_over(script_json, job_id, temp_dir):
     except (BotoCoreError, ClientError) as e:
         print(f"Polly error: {e}")
         raise
-    except subprocess.CalledProcessError as e:
-        print(f"FFmpeg error while concatenating audio: {e.stderr}")
-        raise
     except Exception as e:
         print(f"Unexpected error in voice_over: {e}")
         raise
-
-

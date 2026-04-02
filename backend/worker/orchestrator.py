@@ -28,7 +28,7 @@ def process_video_job(self, job_data):
     """
     job_id = job_data['id']
     prompt = job_data['prompt']
-    style = job_data['style']
+    style = job_data.get('style', 'Default')
 
     session_seed = random.randint(1, 2147483647)
     temp_dir = os.path.join(tempfile.gettempdir(), f'keyframe_job_{job_id}')
@@ -38,7 +38,7 @@ def process_video_job(self, job_data):
     try:
         # --- The Watchman: verify environment before spending any API credits ---
         database.update_job_status(job_id, 'agent_watchman_active')
-        print(f"Starting job {job_id} - Style: {style}")
+        print(f"Starting job {job_id}")
         watchman.preflight(job_id)
 
         # --- The Director: script + global visual bible ---
@@ -48,9 +48,19 @@ def process_video_job(self, job_data):
         visual_bible = script.generate_visual_bible(script_data, style)
         script_data['visual_bible'] = visual_bible
 
+        # Signal slide count + context_refs to the frontend for per-slide agent visualization
+        slide_count = len(script_data.get('slides', []))
+        refs_pairs = []
+        for i, slide in enumerate(script_data['slides']):
+            for ref in slide.get('context_refs', []):
+                refs_pairs.append(f'{i}>{ref}')
+        refs_part = ':' + ','.join(refs_pairs) if refs_pairs else ''
+        database.update_job_status(job_id, f'agent_director_slides_{slide_count}{refs_part}')
+        print(f"Job {job_id}: Director done — {slide_count} slides, refs={refs_pairs}, content_type={script_data.get('content_type','general')}")
+
         # --- The Continuity Artist + Voice Over in parallel ---
-        database.update_job_status(job_id, 'agent_artist_slide_1')
-        print(f"Job {job_id}: Generating images and voiceover in parallel...")
+        # Images are generated sequentially (per-slide agent) while voice runs in parallel
+        print(f"Job {job_id}: Starting images (sequential) + voiceover (parallel)...")
 
         def generate_images_task():
             return image_generation.generate_images(

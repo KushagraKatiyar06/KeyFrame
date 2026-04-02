@@ -29,4 +29,7 @@ venv/
 # ffmeg
 /bin/
 
-CLAUDE.md
+CLAUDE.md1
+
+services.txt
+explanation.txt

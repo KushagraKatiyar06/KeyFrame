@@ -97,6 +97,147 @@
   }
 }
 
+/* Admin badge on logo */
+.adminBadge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FF5757;
+  color: white;
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+/* Exit admin button */
+.signOutButton {
+  background: none;
+  border: 1px solid rgba(255,87,87,0.4);
+  color: rgba(255,87,87,0.8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.signOutButton:hover {
+  background: rgba(255,87,87,0.1);
+  border-color: #FF5757;
+  color: #FF5757;
+}
+
+/* Admin modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.adminModal {
+  background: #1a1a1a;
+  border: 1px solid rgba(255,87,87,0.25);
+  border-radius: 14px;
+  padding: 2.5rem 2rem;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+}
+
+.adminModalTitle {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+.adminForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.adminInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  font-family: monospace;
+}
+
+.adminInput:focus {
+  border-color: #FF5757;
+}
+
+.adminSubmit {
+  padding: 0.75rem;
+  background: #FF5757;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.adminSubmit:hover {
+  background: #ff3a3a;
+}
+
+.adminCancel {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.adminCancel:hover {
+  color: rgba(255,255,255,0.7);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-6px); }
+  80%       { transform: translateX(6px); }
+}
+
+.shake {
+  animation: shake 0.45s ease;
+}
+
 @media (max-width: 480px) {
   .navbar {
     padding: 0 1rem;

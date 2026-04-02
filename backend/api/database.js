@@ -22,6 +22,7 @@ async function createVideosTable() {
     CREATE TABLE IF NOT EXISTS videos (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       prompt TEXT NOT NULL,
+      title TEXT,
       style TEXT NOT NULL,
       status TEXT DEFAULT 'queued',
       video_url TEXT,
@@ -30,6 +31,7 @@ async function createVideosTable() {
     );
     CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);
     CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at DESC);
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS title TEXT;
   `;
 
   try {
@@ -107,34 +109,73 @@ async function getJobById(id){
     throw error;
   }
 }
-//gets the last 15 completed videos for the feed (5 from each category)
-async function getRecentCompletedVideos() {
+//gets all completed videos for the community feed, with optional search filter
+async function getRecentCompletedVideos(search = null) {
+  const params = [];
+  let whereClause = `WHERE status = 'done'`;
+
+  if (search && search.trim()) {
+    params.push(`%${search.trim()}%`);
+    whereClause += ` AND (title ILIKE $1 OR prompt ILIKE $1)`;
+  }
+
   const query = `
-    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
-     FROM videos
-     WHERE status = 'done' AND style = 'Educational'
-     ORDER BY created_at DESC
-     LIMIT 5)
-    UNION ALL
-    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
-     FROM videos
-     WHERE status = 'done' AND style = 'Meme'
-     ORDER BY created_at DESC
-     LIMIT 5)
-    UNION ALL
-    (SELECT id, prompt, style, video_url, thumbnail_url, created_at
-     FROM videos
-     WHERE status = 'done' AND style = 'Storytelling'
-     ORDER BY created_at DESC
-     LIMIT 5)
+    SELECT id, COALESCE(title, prompt) AS display_title, prompt, title, style, video_url, thumbnail_url, created_at
+    FROM videos
+    ${whereClause}
     ORDER BY created_at DESC;
   `;
 
   try {
-    const result = await pool.query(query);
+    const result = await pool.query(query, params);
     return result.rows;
   } catch (error) {
     console.error('Error getting completed videos:', error.message);
+    throw error;
+  }
+}
+
+//inserts a pre-completed video record (for admin uploads of migrated videos)
+async function insertCompletedVideo(prompt, title, videoUrl, thumbnailUrl) {
+  const query = `
+    INSERT INTO videos (prompt, title, style, status, video_url, thumbnail_url)
+    VALUES ($1, $2, 'Uploaded', 'done', $3, $4)
+    RETURNING id;
+  `;
+  try {
+    const result = await pool.query(query, [prompt || title, title, videoUrl, thumbnailUrl]);
+    const videoId = result.rows[0].id;
+    console.log('Uploaded video inserted with ID:', videoId);
+    return videoId;
+  } catch (error) {
+    console.error('Error inserting uploaded video:', error.message);
+    throw error;
+  }
+}
+
+//deletes a video by id
+async function deleteVideoById(id) {
+  const query = `DELETE FROM videos WHERE id = $1 RETURNING id;`;
+  try {
+    const result = await pool.query(query, [id]);
+    if (result.rowCount === 0) throw new Error('Video not found');
+    console.log(`Deleted video: ${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting video:', error.message);
+    throw error;
+  }
+}
+
+//updates the display title of a video
+async function updateVideoTitle(id, title) {
+  const query = `UPDATE videos SET title = $1 WHERE id = $2 RETURNING id;`;
+  try {
+    const result = await pool.query(query, [title, id]);
+    if (result.rowCount === 0) throw new Error('Video not found');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating title:', error.message);
     throw error;
   }
 }
@@ -171,9 +212,12 @@ module.exports = {
   pool,
   createVideosTable,
   insertJob,
+  insertCompletedVideo,
   updateJobStatus,
   getJobById,
   getRecentCompletedVideos,
+  deleteVideoById,
+  updateVideoTitle,
   deleteVideosByPrompt,
   closePool
 };

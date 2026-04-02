@@ -7,6 +7,7 @@ function computeProgress(status) {
     if (status === 'done') return 100;
     if (status === 'agent_watchman_active' || status === 'processing') return 12;
     if (status === 'agent_director_writing') return 25;
+    if (status.startsWith('agent_director_slides_')) return 28;
     if (status === 'agent_auditor_checking') return 72;
     if (status === 'agent_auditor_retry') return 75;
     if (status === 'agent_stitching') return 82;
@@ -44,7 +45,8 @@ export async function GET(request, { params }) {
             status: data.status,
             progress: computeProgress(data.status),
             videoUrl: data.video_url,
-            thumbnailUrl: data.thumbnail_url
+            thumbnailUrl: data.thumbnail_url,
+            title: data.title || null
         };
 
         return NextResponse.json(transformedData, { status: 200 });

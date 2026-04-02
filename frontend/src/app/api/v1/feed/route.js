@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
 
 //Proxy to backend API
-export async function GET() {
+export async function GET(request) {
     try {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:3002';
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const backendSearch = search ? `?search=${encodeURIComponent(search)}` : '';
 
         //Added a 10 second timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch(`${backendUrl}/api/v1/feed`, {
+        const response = await fetch(`${backendUrl}/api/v1/feed${backendSearch}`, {
             signal: controller.signal
         });
 

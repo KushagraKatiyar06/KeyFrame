@@ -110,6 +110,20 @@
   object-fit: cover;
 }
 
+.durationBadge {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
 .videoInfo {
   padding: 1.5rem;
   display: flex;
@@ -211,6 +225,310 @@
   color: rgba(255, 255, 255, 0.5);
   font-size: 1.2rem;
   text-align: center;
+}
+
+/* Admin mode */
+.videoCardAdmin {
+  border-color: rgba(255, 87, 87, 0.35);
+}
+
+.adminControls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.adminBtn {
+  padding: 0.3rem 0.75rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.adminBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.adminBtnDelete {
+  border-color: rgba(255,87,87,0.3);
+  color: rgba(255,87,87,0.7);
+}
+
+.adminBtnDelete:hover {
+  background: rgba(255,87,87,0.12);
+  border-color: #FF5757;
+  color: #FF5757;
+}
+
+.renameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.renameInput {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid #FF5757;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.adminActionBtn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 5px;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.adminActionBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* Search bar */
+.searchRow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.searchInput {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50px;
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 0.65rem 2.5rem 0.65rem 1.25rem;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.searchInput:focus {
+  border-color: rgba(255, 87, 87, 0.5);
+}
+
+.searchClear {
+  position: absolute;
+  right: 0.9rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.searchClear:hover {
+  color: #fff;
+}
+
+/* Upload button in header */
+.uploadBtn {
+  margin-top: 1.25rem;
+  padding: 0.6rem 1.5rem;
+  background: rgba(255, 87, 87, 0.12);
+  border: 1px solid rgba(255, 87, 87, 0.45);
+  border-radius: 8px;
+  color: #FF5757;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.uploadBtn:hover {
+  background: rgba(255, 87, 87, 0.22);
+  border-color: #FF5757;
+  color: #fff;
+}
+
+/* Upload modal overlay */
+.uploadOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.uploadModal {
+  background: #111;
+  border: 1px solid rgba(255, 87, 87, 0.3);
+  border-radius: 14px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.uploadModalTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 1.5rem;
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.uploadLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.75rem;
+}
+
+.uploadRequired {
+  color: #FF5757;
+  margin-left: 2px;
+}
+
+.uploadInput {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.8rem;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.uploadInput:focus {
+  border-color: rgba(255, 87, 87, 0.5);
+}
+
+.filePickerRow {
+  display: flex;
+  align-items: center;
+}
+
+.filePickerBtn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.88rem;
+  padding: 0.55rem 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filePickerBtn:hover {
+  border-color: rgba(255, 87, 87, 0.4);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 87, 87, 0.05);
+}
+
+.uploadError {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.uploadActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.uploadCancelBtn {
+  padding: 0.55rem 1.3rem;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.uploadCancelBtn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.uploadCancelBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.uploadSubmitBtn {
+  padding: 0.55rem 1.5rem;
+  background: #FF5757;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.uploadSubmitBtn:hover:not(:disabled) {
+  background: #ff3838;
+  box-shadow: 0 0 16px rgba(255, 87, 87, 0.4);
+}
+
+.uploadSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive Design */

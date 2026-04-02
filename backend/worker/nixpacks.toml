@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["ffmpeg"]
+
+[start]
+cmd = "celery -A app worker --loglevel=info"

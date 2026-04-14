@@ -74,84 +74,20 @@ FFPROBE_PATH=
 
 > **Note:** FFmpeg path is configurable via `FFMPEG_PATH` and `FFPROBE_PATH` env vars (see FFmpeg section below). If these are not set, the worker falls back to `<repo-root>/bin/ffmpeg.exe`.
 
-**API keys required** (all have free tiers):
-
-| Key | Service | Where to get it |
-|---|---|---|
-| `OPENAI_API_KEY` | Script + visual bible generation (GPT-4o-mini) | platform.openai.com |
-| `NEBIUS_API_KEY` | Flux-Schnell image generation (10–16 images/video) | studio.nebius.ai |
-| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | Amazon Polly TTS (generative engine) | console.aws.amazon.com → IAM |
-| `CLOUDFLARE_*` + `R2_*` | Video/thumbnail storage | dash.cloudflare.com → R2 |
-| `ADMIN_PASSWORD` | Admin UI (upload/delete/rename videos in feed) | — set your own value |
-
-> **AWS note:** Create an IAM user with `AmazonPollyFullAccess` attached. The `generative` Polly engine (used by default, falls back to `neural`) requires `polly:SynthesizeSpeech` — same key, no extra setup needed.
-
-## 3) Quick Docker Compose (start Redis/Postgres locally)
-
-If you don't want to install Redis/Postgres system-wide, create a `docker-compose.yml` in the repo root with the following services and run `docker compose up -d`:
-
-```
-version: '3.8'
-services:
-	redis:
-		image: redis:7
-		ports:
-			- "6379:6379"
-
-	postgres:
-		image: postgres:15
-		environment:
-			POSTGRES_USER: keyframe_user
-			POSTGRES_PASSWORD: password
-			POSTGRES_DB: keyframe_db
-		ports:
-			- "5432:5432"
-		volumes:
-			- pgdata:/var/lib/postgresql/data
-
-volumes:
-	pgdata:
-```
-
-## 4) FFmpeg (Windows guidance)
-
-The worker reads `FFMPEG_PATH` and `FFPROBE_PATH` from the `.env` file. If these are not set, it falls back to `<repo-root>/bin/ffmpeg.exe`.
-
-**Recommended: install via winget (handles updates and PATH automatically)**
-
-```powershell
-winget install Gyan.FFmpeg
-where ffmpeg   # copy the output path
-```
-
-Then set in `backend/worker/.env`:
-```
-FFMPEG_PATH=C:\Users\<you>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg-...\bin\ffmpeg.exe
-FFPROBE_PATH=C:\Users\<you>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg-...\bin\ffprobe.exe
-```
-
-**Alternative: manual install**
+## 3) FFmpeg (Windows guidance)
 
 1. Download a Windows build from [https://www.gyan.dev/ffmpeg/builds/](https://www.gyan.dev/ffmpeg/builds/) (get the "essentials" release build)
 2. Extract and copy `ffmpeg.exe` and `ffprobe.exe` into a `bin/` folder at the repository root:
-   ```
-   KeyFrame.v1/
-   └── bin/
-       ├── ffmpeg.exe
-       └── ffprobe.exe
-   ```
 3. Verify: `./bin/ffmpeg.exe -version`
 
-> The `bin/` folder is git-ignored, so you need to do this on every fresh clone.
-
-**Windows Smart App Control / AppLocker note**
+**Windows Smart App Control / AppLocker note (I had this problem)**
 
 If you get `[WinError 4551] An Application Control policy has blocked this file` when the worker tries to run FFmpeg, Windows Smart App Control is blocking the subprocess. Fix:
 
 - Go to **Settings → Windows Security → App & Browser Control → Smart App Control** and set it to **Off**, then restart.
 - If you're on a managed/enterprise machine, ask IT to allowlist the FFmpeg binary.
 
-## 5) Install & run (local, non-Docker)
+## 4) Install & run
 
 Backend API
 
@@ -191,7 +127,7 @@ npm run dev
 
 The dev server runs on `http://localhost:3000` by default.
 
-Create `frontend/.env.local` to point the frontend at the real backend (already created if you followed the setup above):
+Create `frontend/.env.local`
 
 ```
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
@@ -199,44 +135,7 @@ BACKEND_URL=http://localhost:3002
 ADMIN_PASSWORD=your-admin-password
 ```
 
-> **Note:** `ADMIN_PASSWORD` has no `NEXT_PUBLIC_` prefix — it is server-side only and never sent to the browser. Admin auth uses httpOnly cookies. To log in as admin, click the logo on any page and enter the password.
-
-## 2) Assets
-
-Place optional static assets if you want the full visual polish (not required to run):
-
-- `public/assets/Logo_Transparent.png` — site logo
-- `public/assets/videos/mock.mp4` — mock demo video used by example pages
-- `public/assets/thumbnails/mock.jpg` — mock thumbnail
-
-## 3) Mock API vs Real Backend
-
-- The repo includes simple Next.js API routes under `src/app/api/v1/*` that return mock jobIds and simulated status. These are convenient for local UI development.
-- To use the real backend instead, point the frontend to your backend by setting `NEXT_PUBLIC_BACKEND_URL` in `frontend/.env.local`, for example:
-
-```
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
-BACKEND_URL=http://localhost:3002
-```
-
-Then update client fetch calls to use `process.env.NEXT_PUBLIC_BACKEND_URL` (the code already prefers `NEXT_PUBLIC_BACKEND_URL` if present). If you run Next dev and keep the built-in API routes, local routes will take precedence — remove or rename the mock routes if you want all calls to go to the real backend.
-
-## 4) File structure & pages
-
-- `/` — `src/app/page.tsx` (home + prompt form, daily quota indicator)
-- `/status/[jobId]` — `src/app/status/[jobId]/page.tsx` (job progress + video playback + Show Log panel)
-- `/feed` — `src/app/feed/page.tsx` (community feed with search; admin controls for upload/rename/delete)
-
-## 5) Linting
-
-Run the linter before creating PRs:
-
-```powershell
-cd frontend
-npm run lint
-# auto-fix
-npm run lint -- --fix
-```
+> **Note:** `ADMIN_PASSWORD` has no `NEXT_PUBLIC_`
 
 ### Developed by the Kushagra Katiyar
  

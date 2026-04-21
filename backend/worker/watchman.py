@@ -6,7 +6,6 @@ def preflight(job_id):
     print(f"Watchman: starting pre-flight checks for job {job_id}...")
     _check_ffmpeg()
     _ping_openai()
-    _ping_nebius_text()
     _ping_replicate()
     _ping_aws()
     print("Watchman: all pre-flight checks passed.\n")
@@ -34,19 +33,6 @@ def _ping_openai():
         if _is_auth_error(e):
             raise Exception(f"Watchman: OpenAI auth failed — {e}")
         print(f"Watchman: OpenAI non-auth warning (continuing): {e}")
-
-def _ping_nebius_text():
-    try:
-        client = OpenAI(
-            base_url="https://api.tokenfactory.us-central1.nebius.com/v1/",
-            api_key=os.getenv('NEBIUS_API_KEY')
-        )
-        client.models.list()
-        print("Watchman: Nebius (text) OK")
-    except Exception as e:
-        if _is_auth_error(e):
-            raise Exception(f"Watchman: Nebius auth failed — {e}")
-        print(f"Watchman: Nebius non-auth warning (continuing): {e}")
 
 def _ping_replicate():
     import httpx

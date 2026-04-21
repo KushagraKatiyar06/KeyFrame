@@ -2,15 +2,8 @@ import os
 import json
 from openai import OpenAI
 
-# Nebius text generation client (nemotron model) — used for main script
-nebius = OpenAI(
-    base_url="https://api.tokenfactory.us-central1.nebius.com/v1/",
-    api_key=os.environ.get("NEBIUS_API_KEY")
-)
-NEBIUS_TEXT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
-
-# OpenAI fallback — used for visual bible (short call, nemotron unreliable on it)
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+GPT_MODEL = "gpt-4o-mini"
 
 AVAILABLE_VOICES = ['Ruth', 'Matthew', 'Brian', 'Amy', 'Joanna', 'Danielle']
 
@@ -77,13 +70,13 @@ Return ONLY valid JSON in this exact format:
         script_json = None
 
         for attempt in range(1, 4):
-            print(f"1. Calling Nebius nemotron (attempt {attempt}/3)...")
+            print(f"1. Calling GPT (attempt {attempt}/3)...")
             user_msg = f"Create a video about: {prompt}"
             if attempt > 1:
                 user_msg += f" IMPORTANT: You must generate exactly {MIN_SLIDES} slides minimum. Previous attempt had too few slides."
 
-            response = nebius.chat.completions.create(
-                model=NEBIUS_TEXT_MODEL,
+            response = openai_client.chat.completions.create(
+                model=GPT_MODEL,
                 messages=[
                     {"role": "system", "content": chatgpt_prompt},
                     {"role": "user", "content": user_msg}
@@ -162,7 +155,7 @@ Return ONLY valid JSON in this exact format:
         return script_json
 
     except json.JSONDecodeError as e:
-        print(f"Error parsing Nebius response as JSON: {e}")
+        print(f"Error parsing GPT response as JSON: {e}")
         print(f"Response was: {output_json_string}")
         raise Exception("Failed to generate valid JSON")
 

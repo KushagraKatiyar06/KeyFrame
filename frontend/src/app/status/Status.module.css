@@ -210,6 +210,51 @@
     margin-left: -1rem;
 }
 
+/* Community section (author + submit) */
+.communitySection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+}
+
+.authorInput {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.authorInput::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.authorInput:focus {
+    border-color: rgba(255, 87, 87, 0.5);
+}
+
+.submitError {
+    color: #ff6b6b;
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.submitSuccess {
+    color: #5dca8a;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.6rem;
+    margin: 0;
+}
+
 /* Submit Button */
 .submitButton {
     width: 100%;

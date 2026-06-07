@@ -5,7 +5,10 @@ const db = require('../database');
 router.get('/', async (req,res) =>{
   try {
     const search = req.query.search || null;
-    const videos = await db.getRecentCompletedVideos(search);
+    const auth = req.headers['authorization'] || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+    const isAdmin = !!process.env.ADMIN_PASSWORD && token === process.env.ADMIN_PASSWORD;
+    const videos = await db.getRecentCompletedVideos(search, isAdmin);
 
     //return the videos array
     res.status(200).json({

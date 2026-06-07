@@ -16,6 +16,7 @@ interface JobStatus {
     videoUrl: string | null;
     thumbnailUrl: string | null;
     title: string | null;
+    authorName: string | null;
 }
 
 type AgentState = 'idle' | 'active' | 'retry' | 'done';
@@ -124,6 +125,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     const [titleDirty, setTitleDirty] = useState(false);
     const [titleSaved, setTitleSaved] = useState(false);
 
+    const [authorName, setAuthorName] = useState('');
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
     const [showLog, setShowLog] = useState(false);
     const [logLines, setLogLines] = useState<string[]>([]);
 
@@ -173,11 +178,14 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                 if (parsed.size > 0) setMaxSlidesSeen(prev => Math.max(prev, ...parsed));
             }
 
-            // initialize title from DB if available
+            // initialize title and author from DB if available
             if (data.title) {
                 setVideoTitle(data.title);
             } else if (!videoTitle && data.status === 'done') {
                 setVideoTitle(`VIDEO #${jobId.slice(0, 4).toUpperCase()}`);
+            }
+            if (data.authorName && !authorName) {
+                setAuthorName(data.authorName);
             }
         } catch (err) {
             console.error("Polling error:", err);
@@ -237,18 +245,24 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     // ---- DONE STATE ----
     if (jobStatus?.status === 'done' && jobStatus.videoUrl) {
 
-        const handleSaveTitle = async () => {
-            if (!titleDirty || !videoTitle.trim()) return;
+        const handleSaveTitle = async (): Promise<boolean> => {
+            if (!titleDirty || !videoTitle.trim()) return true;
             try {
-                await fetch(`/api/v1/status/${jobId}/title`, {
+                const res = await fetch(`/api/v1/status/${jobId}/title`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: videoTitle.trim() })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    setSubmitError(err.error || 'Title was rejected');
+                    return false;
+                }
                 setTitleDirty(false);
                 setTitleSaved(true);
                 setTimeout(() => setTitleSaved(false), 2000);
-            } catch { /* silent fail */ }
+                return true;
+            } catch { return false; }
         };
 
         const handleDownload = async () => {
@@ -300,8 +314,26 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         };
 
         const handleSubmitToCommunity = async () => {
-            await handleSaveTitle();
-            alert('Video submitted to community!');
+            setSubmitError(null);
+            const titleOk = await handleSaveTitle();
+            if (!titleOk) return;
+
+            if (authorName.trim()) {
+                try {
+                    const res = await fetch(`/api/v1/status/${jobId}/author`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ author_name: authorName.trim() })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        setSubmitError(err.error || 'Name was rejected');
+                        return;
+                    }
+                } catch { /* silent */ }
+            }
+
+            setSubmitSuccess(true);
         };
 
         return (
@@ -346,9 +378,25 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                 </button>
                             </div>
 
-                            <button className={styles.submitButton} onClick={handleSubmitToCommunity}>
-                                Submit Video to Community
-                            </button>
+                            <div className={styles.communitySection}>
+                                <input
+                                    type="text"
+                                    value={authorName}
+                                    onChange={e => { setAuthorName(e.target.value); setSubmitError(null); }}
+                                    className={styles.authorInput}
+                                    placeholder="Your name (optional)..."
+                                    maxLength={50}
+                                />
+                                {submitError && <p className={styles.submitError}>{submitError}</p>}
+                                {submitSuccess
+                                    ? <p className={styles.submitSuccess}>Posted to community!</p>
+                                    : (
+                                        <button className={styles.submitButton} onClick={handleSubmitToCommunity}>
+                                            Post to Community
+                                        </button>
+                                    )
+                                }
+                            </div>
                         </div>
                     </div>
 

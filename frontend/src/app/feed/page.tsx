@@ -8,9 +8,12 @@ import styles from './Feed.module.css';
 interface Video {
   id: string;
   title: string;
+  prompt: string;
+  authorName: string | null;
   style: string;
   thumbnailUrl: string;
   videoUrl: string;
+  hidden: boolean;
 }
 
 
@@ -20,6 +23,8 @@ export default function Feed() {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [renaming, setRenaming] = useState<Record<string, string>>({});
+  const [renamingAuthor, setRenamingAuthor] = useState<Record<string, string>>({});
+  const [showPrompts, setShowPrompts] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
@@ -69,9 +74,12 @@ export default function Feed() {
       setVideos(rawVideos.map((v: any) => ({
         id: v.id,
         title: v.display_title || v.title || v.prompt,
+        prompt: v.prompt || '',
+        authorName: v.author_name || null,
         style: v.style,
         thumbnailUrl: v.thumbnail_url || v.thumbnailUrl,
-        videoUrl: v.video_url || v.videoUrl
+        videoUrl: v.video_url || v.videoUrl,
+        hidden: !!v.hidden
       })));
     } catch (err) {
       setError('Failed to load community videos');
@@ -99,10 +107,44 @@ export default function Feed() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle })
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to rename video.');
+        return;
+      }
       setVideos(prev => prev.map(v => v.id === id ? { ...v, title: newTitle } : v));
       setRenaming(prev => { const n = { ...prev }; delete n[id]; return n; });
     } catch { alert('Failed to rename video.'); }
+  };
+
+  const handleRenameAuthorSubmit = async (id: string) => {
+    const newAuthor = renamingAuthor[id]?.trim();
+    try {
+      const res = await fetch(`/api/v1/admin/videos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author_name: newAuthor || null })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to update author.');
+        return;
+      }
+      setVideos(prev => prev.map(v => v.id === id ? { ...v, authorName: newAuthor || null } : v));
+      setRenamingAuthor(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } catch { alert('Failed to update author.'); }
+  };
+
+  const handleToggleHidden = async (id: string, currentlyHidden: boolean) => {
+    try {
+      const res = await fetch(`/api/v1/admin/videos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hidden: !currentlyHidden })
+      });
+      if (!res.ok) throw new Error();
+      setVideos(prev => prev.map(v => v.id === id ? { ...v, hidden: !currentlyHidden } : v));
+    } catch { alert('Failed to update visibility.'); }
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -190,7 +232,7 @@ export default function Feed() {
         {!loading && !error && videos.length > 0 && (
           <div className={styles.videoGrid}>
             {videos.map((video) => (
-              <div key={video.id} className={`${styles.videoCard} ${isAdmin ? styles.videoCardAdmin : ''}`}>
+              <div key={video.id} className={`${styles.videoCard} ${isAdmin ? styles.videoCardAdmin : ''} ${isAdmin && video.hidden ? styles.videoCardHidden : ''}`}>
                 <div className={styles.thumbnailContainer}>
                   <video
                     className={styles.videoThumbnail}
@@ -206,6 +248,9 @@ export default function Feed() {
                     <span className={styles.durationBadge}>
                       {Math.floor(durations[video.id] / 60)}:{String(Math.floor(durations[video.id] % 60)).padStart(2, '0')}
                     </span>
+                  )}
+                  {isAdmin && video.hidden && (
+                    <span className={styles.hiddenBadge}>HIDDEN</span>
                   )}
                 </div>
                 <div className={styles.videoInfo}>
@@ -227,9 +272,48 @@ export default function Feed() {
                   ) : (
                     <h3 className={styles.videoTitle} title={video.title}>{video.title}</h3>
                   )}
+
+                  {/* Author name */}
+                  {isAdmin && video.id in renamingAuthor ? (
+                    <div className={styles.renameRow}>
+                      <input
+                        className={styles.renameInput}
+                        value={renamingAuthor[video.id] ?? (video.authorName || '')}
+                        onChange={e => setRenamingAuthor(prev => ({ ...prev, [video.id]: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleRenameAuthorSubmit(video.id);
+                          if (e.key === 'Escape') setRenamingAuthor(prev => { const n = { ...prev }; delete n[video.id]; return n; });
+                        }}
+                        placeholder="Author name..."
+                        autoFocus
+                      />
+                      <button className={styles.adminActionBtn} onClick={() => handleRenameAuthorSubmit(video.id)}>✓</button>
+                      <button className={styles.adminActionBtn} onClick={() => setRenamingAuthor(prev => { const n = { ...prev }; delete n[video.id]; return n; })}>✕</button>
+                    </div>
+                  ) : video.authorName ? (
+                    <p className={styles.videoAuthor}>by {video.authorName}</p>
+                  ) : null}
+
+                  {/* Prompt reveal */}
+                  <div className={styles.promptRow}>
+                    <button
+                      className={styles.promptToggle}
+                      onClick={() => setShowPrompts(prev => ({ ...prev, [video.id]: !prev[video.id] }))}
+                    >
+                      {showPrompts[video.id] ? 'Hide Prompt' : 'View Prompt'}
+                    </button>
+                    {showPrompts[video.id] && (
+                      <p className={styles.promptReveal}>{video.prompt}</p>
+                    )}
+                  </div>
+
                   {isAdmin && (
                     <div className={styles.adminControls}>
                       <button className={styles.adminBtn} onClick={() => setRenaming(prev => ({ ...prev, [video.id]: video.title }))}>Rename</button>
+                      <button className={styles.adminBtn} onClick={() => setRenamingAuthor(prev => ({ ...prev, [video.id]: video.authorName || '' }))}>Author</button>
+                      <button className={`${styles.adminBtn} ${video.hidden ? styles.adminBtnUnhide : styles.adminBtnHide}`} onClick={() => handleToggleHidden(video.id, video.hidden)}>
+                        {video.hidden ? 'Unhide' : 'Hide'}
+                      </button>
                       <button className={`${styles.adminBtn} ${styles.adminBtnDelete}`} onClick={() => handleDelete(video.id)}>Delete</button>
                     </div>
                   )}

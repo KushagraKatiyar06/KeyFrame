@@ -56,12 +56,21 @@ const PromptSection = () => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quota, setQuota] = useState<{ used: number; limit: number; remaining: number; resetsInSeconds: number } | null>(null);
+  const [quota, setQuota] = useState<{ used: number; limit: number; remaining: number; userUsed: number; userLimit: number; userRemaining: number; resetsInSeconds: number } | null>(null);
+  const [userToken, setUserToken] = useState('');
 
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/v1/quota')
+    // get or create a stable browser UUID for per-user rate limiting
+    let token = localStorage.getItem('kf_user_token');
+    if (!token) {
+      token = crypto.randomUUID();
+      localStorage.setItem('kf_user_token', token);
+    }
+    setUserToken(token);
+
+    fetch('/api/v1/quota', { headers: { 'X-User-Token': token } })
       .then(r => r.json())
       .then(setQuota)
       .catch(() => {});
@@ -82,7 +91,10 @@ const PromptSection = () => {
     try {
       const response = await fetch('/api/v1/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userToken ? { 'X-User-Token': userToken } : {}),
+        },
         body: JSON.stringify({ prompt }),
       });
 
@@ -94,7 +106,7 @@ const PromptSection = () => {
         const hrs = Math.floor((data.resetsInSeconds || 0) / 3600);
         const mins = Math.floor(((data.resetsInSeconds || 0) % 3600) / 60);
         setError(`Daily limit reached — resets in ${hrs}h ${mins}m. Check back tomorrow!`);
-        setQuota(q => q ? { ...q, remaining: 0 } : q);
+        setQuota(q => q ? { ...q, remaining: 0, userRemaining: 0 } : q);
       } else {
         setError('Failed to start video generation. Received status: ' + response.status);
       }
@@ -137,13 +149,13 @@ const PromptSection = () => {
               <div className={styles.quotaTrack}>
                 <div
                   className={styles.quotaFill}
-                  style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (quota.userUsed / quota.userLimit) * 100)}%` }}
                 />
               </div>
               <span className={styles.quotaLabel}>
-                {quota.remaining === 0
-                  ? `Daily limit reached — resets in ${Math.floor(quota.resetsInSeconds / 3600)}h ${Math.floor((quota.resetsInSeconds % 3600) / 60)}m`
-                  : `${quota.used} / ${quota.limit} videos generated. This is a global limit for everyone please don't bankrupt me. <3`}
+                {quota.userRemaining === 0
+                  ? `You've used your ${quota.userLimit} daily videos — resets in ${Math.floor(quota.resetsInSeconds / 3600)}h ${Math.floor((quota.resetsInSeconds % 3600) / 60)}m`
+                  : `${quota.userUsed} / ${quota.userLimit} of your daily videos used`}
               </span>
             </div>
           )}
@@ -154,7 +166,7 @@ const PromptSection = () => {
             <button
               type="submit"
               className={styles.submitButton}
-              disabled={isLoading || (quota?.remaining === 0)}
+              disabled={isLoading || (quota?.userRemaining === 0)}
             >
               {isLoading ? (
                 <>

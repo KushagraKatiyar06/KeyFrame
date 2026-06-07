@@ -4,6 +4,7 @@ const multer = require('multer');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
+const { isBlocked } = require('../moderation');
 
 
 const upload = multer({
@@ -101,18 +102,30 @@ router.delete('/videos/:id', requireAdmin, async (req, res) => {
     }
 });
 
-// PATCH /api/v1/admin/videos/:id  — rename
+// PATCH /api/v1/admin/videos/:id  — rename, change author, or hide/unhide
 router.patch('/videos/:id', requireAdmin, async (req, res) => {
     try {
-        const { title } = req.body;
-        if (!title || !title.trim()) {
-            return res.status(400).json({ error: 'title is required' });
+        const { title, author_name, hidden } = req.body;
+
+        if (title !== undefined) {
+            if (!title.trim()) return res.status(400).json({ error: 'title cannot be empty' });
+            if (isBlocked(title)) return res.status(422).json({ error: 'Title contains inappropriate content' });
+            await db.updateVideoTitle(req.params.id, title.trim());
         }
-        await db.updateVideoTitle(req.params.id, title.trim());
+
+        if (author_name !== undefined) {
+            if (author_name && isBlocked(author_name)) return res.status(422).json({ error: 'Name contains inappropriate content' });
+            await db.updateVideoAuthor(req.params.id, author_name ? author_name.trim() : null);
+        }
+
+        if (hidden !== undefined) {
+            await db.setVideoHidden(req.params.id, !!hidden);
+        }
+
         res.json({ success: true });
     } catch (error) {
-        console.error('Admin rename error:', error.message);
-        res.status(500).json({ error: 'Failed to rename video' });
+        console.error('Admin update error:', error.message);
+        res.status(500).json({ error: 'Failed to update video' });
     }
 });
 

@@ -227,9 +227,75 @@
   text-align: center;
 }
 
+/* Author name */
+.videoAuthor {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  font-style: italic;
+}
+
+/* Prompt reveal */
+.promptRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.promptToggle {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  width: fit-content;
+}
+
+.promptToggle:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.promptReveal {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 2px solid rgba(255, 87, 87, 0.3);
+  padding-left: 0.65rem;
+  word-break: break-word;
+}
+
 /* Admin mode */
 .videoCardAdmin {
   border-color: rgba(255, 87, 87, 0.35);
+}
+
+.videoCardHidden {
+  opacity: 0.5;
+}
+
+.hiddenBadge {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #FF5757;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  text-transform: uppercase;
 }
 
 .adminControls {
@@ -267,6 +333,28 @@
   background: rgba(255,87,87,0.12);
   border-color: #FF5757;
   color: #FF5757;
+}
+
+.adminBtnHide {
+  border-color: rgba(255,200,50,0.3);
+  color: rgba(255,200,50,0.7);
+}
+
+.adminBtnHide:hover {
+  background: rgba(255,200,50,0.1);
+  border-color: rgba(255,200,50,0.8);
+  color: rgba(255,200,50,1);
+}
+
+.adminBtnUnhide {
+  border-color: rgba(93,202,138,0.3);
+  color: rgba(93,202,138,0.7);
+}
+
+.adminBtnUnhide:hover {
+  background: rgba(93,202,138,0.1);
+  border-color: rgba(93,202,138,0.8);
+  color: rgba(93,202,138,1);
 }
 
 .renameRow {

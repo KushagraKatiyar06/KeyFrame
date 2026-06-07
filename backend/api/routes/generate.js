@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const redis = require('../redis');
-const { DAILY_LIMIT, todayKey, secondsUntilMidnightUTC } = require('./quota');
+const { DAILY_LIMIT, USER_DAILY_LIMIT, todayKey, userKey, secondsUntilMidnightUTC } = require('./quota');
 
 //POST /api/v1/generate
 router.post('/', async (req,res) =>{
@@ -21,6 +21,29 @@ router.post('/', async (req,res) =>{
       });
     }
 
+    const userToken = req.headers['x-user-token'] || '';
+
+    // check per-user daily quota (2/day per browser UUID)
+    if (userToken) {
+      try {
+        const uKey = userKey(userToken);
+        const userCount = await redis.client.incr(uKey);
+        if (userCount === 1) {
+          await redis.client.expire(uKey, secondsUntilMidnightUTC() + 60);
+        }
+        if (userCount > USER_DAILY_LIMIT) {
+          await redis.client.decr(uKey);
+          return res.status(429).json({
+            error: `You've reached your daily limit of ${USER_DAILY_LIMIT} videos. Check back tomorrow!`,
+            userRemaining: 0,
+            resetsInSeconds: secondsUntilMidnightUTC()
+          });
+        }
+      } catch (quotaErr) {
+        console.error('User quota Redis error (failing open):', quotaErr.message);
+      }
+    }
+
     // check global daily quota
     try {
       const key = todayKey();
@@ -30,6 +53,10 @@ router.post('/', async (req,res) =>{
       }
       if (count > DAILY_LIMIT) {
         await redis.client.decr(key);
+        // also roll back user count if we had incremented it
+        if (userToken) {
+          await redis.client.decr(userKey(userToken)).catch(() => {});
+        }
         return res.status(429).json({
           error: `Daily generation limit of ${DAILY_LIMIT} reached. Check back tomorrow.`,
           remaining: 0,

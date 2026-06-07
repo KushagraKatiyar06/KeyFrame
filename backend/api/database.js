@@ -33,6 +33,8 @@ async function createVideosTable() {
     CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at DESC);
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS title TEXT;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS logs TEXT[] DEFAULT '{}';
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS author_name TEXT;
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE;
   `;
 
   try {
@@ -92,7 +94,7 @@ async function updateJobStatus(id, status, videoUrl = null, thumbnailUrl = null)
 //gets a single job by its id
 async function getJobById(id){
   const query = `
-    SELECT id, prompt, style, status, video_url, thumbnail_url, created_at
+    SELECT id, prompt, title, author_name, style, status, video_url, thumbnail_url, created_at
     FROM videos
     WHERE id = $1;
   `;
@@ -111,9 +113,14 @@ async function getJobById(id){
   }
 }
 //gets all completed videos for the community feed, with optional search filter
-async function getRecentCompletedVideos(search = null) {
+//includeHidden=true is only passed for admin requests
+async function getRecentCompletedVideos(search = null, includeHidden = false) {
   const params = [];
   let whereClause = `WHERE status = 'done'`;
+
+  if (!includeHidden) {
+    whereClause += ` AND (hidden IS NULL OR hidden = FALSE)`;
+  }
 
   if (search && search.trim()) {
     params.push(`%${search.trim()}%`);
@@ -121,7 +128,7 @@ async function getRecentCompletedVideos(search = null) {
   }
 
   const query = `
-    SELECT id, COALESCE(title, prompt) AS display_title, prompt, title, style, video_url, thumbnail_url, created_at
+    SELECT id, COALESCE(title, prompt) AS display_title, prompt, title, author_name, style, video_url, thumbnail_url, created_at, COALESCE(hidden, FALSE) AS hidden
     FROM videos
     ${whereClause}
     ORDER BY created_at DESC;
@@ -177,6 +184,32 @@ async function updateVideoTitle(id, title) {
     return { success: true };
   } catch (error) {
     console.error('Error updating title:', error.message);
+    throw error;
+  }
+}
+
+//updates the author name of a video
+async function updateVideoAuthor(id, authorName) {
+  const query = `UPDATE videos SET author_name = $1 WHERE id = $2 RETURNING id;`;
+  try {
+    const result = await pool.query(query, [authorName || null, id]);
+    if (result.rowCount === 0) throw new Error('Video not found');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating author:', error.message);
+    throw error;
+  }
+}
+
+//sets or clears the hidden flag on a video
+async function setVideoHidden(id, hidden) {
+  const query = `UPDATE videos SET hidden = $1 WHERE id = $2 RETURNING id;`;
+  try {
+    const result = await pool.query(query, [!!hidden, id]);
+    if (result.rowCount === 0) throw new Error('Video not found');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating hidden:', error.message);
     throw error;
   }
 }
@@ -248,6 +281,8 @@ module.exports = {
   getRecentCompletedVideos,
   deleteVideoById,
   updateVideoTitle,
+  updateVideoAuthor,
+  setVideoHidden,
   deleteVideosByPrompt,
   closePool
 };

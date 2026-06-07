@@ -12,8 +12,15 @@ export async function GET(request) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+        // forward admin auth so backend can include hidden videos for admins
+        const { cookies } = await import('next/headers');
+        const cookieStore = await cookies();
+        const session = cookieStore.get('kf_session');
+        const isAdmin = !!process.env.ADMIN_PASSWORD && session?.value === process.env.ADMIN_PASSWORD;
+
         const response = await fetch(`${backendUrl}/api/v1/feed${backendSearch}`, {
-            signal: controller.signal
+            signal: controller.signal,
+            headers: isAdmin ? { Authorization: `Bearer ${process.env.ADMIN_PASSWORD}` } : {},
         });
 
         clearTimeout(timeoutId);

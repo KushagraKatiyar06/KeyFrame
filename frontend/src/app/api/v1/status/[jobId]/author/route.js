@@ -6,7 +6,7 @@ export async function PATCH(request, { params }) {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:3002';
         const body = await request.json();
 
-        const response = await fetch(`${backendUrl}/api/v1/status/${jobId}/title`, {
+        const response = await fetch(`${backendUrl}/api/v1/status/${jobId}/author`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -15,7 +15,7 @@ export async function PATCH(request, { params }) {
         const data = await response.json();
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
-        console.error('Error saving title:', error);
-        return NextResponse.json({ error: 'Failed to save title' }, { status: 500 });
+        console.error('Error saving author:', error);
+        return NextResponse.json({ error: 'Failed to save author name' }, { status: 500 });
     }
 }

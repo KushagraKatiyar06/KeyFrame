@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '../components/Navbar';
 import { ParticleBackground } from '../components/ParticleBackground';
+import { useIsAdmin } from '../../lib/useIsAdmin';
 import styles from './Feed.module.css';
 
 interface Video {
@@ -16,12 +17,27 @@ interface Video {
   hidden: boolean;
 }
 
+// shape returned by GET /api/v1/feed (snake_case, straight from Postgres)
+interface RawFeedVideo {
+  id: string;
+  display_title?: string;
+  title?: string;
+  prompt?: string;
+  author_name?: string | null;
+  style: string;
+  thumbnail_url?: string;
+  thumbnailUrl?: string;
+  video_url?: string;
+  videoUrl?: string;
+  hidden?: boolean;
+}
+
 
 export default function Feed() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin] = useIsAdmin();
   const [renaming, setRenaming] = useState<Record<string, string>>({});
   const [renamingAuthor, setRenamingAuthor] = useState<Record<string, string>>({});
   const [showPrompts, setShowPrompts] = useState<Record<string, boolean>>({});
@@ -39,18 +55,6 @@ export default function Feed() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const checkSession = () => {
-      fetch('/api/v1/admin/session')
-        .then(r => r.json())
-        .then(data => setIsAdmin(data.isAdmin))
-        .catch(() => {});
-    };
-    checkSession();
-    window.addEventListener('kf_admin_change', checkSession);
-    return () => window.removeEventListener('kf_admin_change', checkSession);
-  }, []);
 
   useEffect(() => { fetchFeedVideos(); }, []);
 
@@ -70,15 +74,15 @@ export default function Feed() {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch feed videos');
       const data = await response.json();
-      const rawVideos = data.videos || data;
-      setVideos(rawVideos.map((v: any) => ({
+      const rawVideos: RawFeedVideo[] = data.videos || data;
+      setVideos(rawVideos.map((v) => ({
         id: v.id,
-        title: v.display_title || v.title || v.prompt,
+        title: v.display_title || v.title || v.prompt || '',
         prompt: v.prompt || '',
         authorName: v.author_name || null,
         style: v.style,
-        thumbnailUrl: v.thumbnail_url || v.thumbnailUrl,
-        videoUrl: v.video_url || v.videoUrl,
+        thumbnailUrl: v.thumbnail_url || v.thumbnailUrl || '',
+        videoUrl: v.video_url || v.videoUrl || '',
         hidden: !!v.hidden
       })));
     } catch (err) {
@@ -175,8 +179,8 @@ export default function Feed() {
       setUploadThumbFile(null);
       setLoading(true);
       await fetchFeedVideos(search);
-    } catch (err: any) {
-      setUploadError(err.message || 'Upload failed');
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
     }

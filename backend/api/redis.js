@@ -59,22 +59,7 @@ async function pushJob(jobData) {
   }
 }
 
-//helper function to get a job from the queue
-async function getJob() {
-  try {
-    const job = await client.blPop('celery', 0);
-    if (job) {
-      return JSON.parse(job.element);
-    }
-    return null;
-  } catch (error) {
-    console.error('Error getting job from Redis:', error);
-    throw error;
-  }
-}
-
 module.exports = {
   client,
-  pushJob,
-  getJob
+  pushJob
 };

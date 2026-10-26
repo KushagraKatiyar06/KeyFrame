@@ -10,7 +10,7 @@ Here it is: https://keyframe-frontend-production.up.railway.app/
 
 Frontend: React, Next.js, HTML, CSS, JavaScript, TypeScript
 
-Backend: Redis, PostgrSQL, OpenAI, Flux-Schnell, Amazon Polly, FFMPEG
+Backend: Redis, PostgreSQL, OpenAI, Flux-Schnell, Amazon Polly, FFMPEG
 
 Dev Ops: Docker, Railway (all three services hosted on Railway)
 
@@ -37,6 +37,7 @@ REDIS_URL=redis://localhost:6379
 DATABASE_URL=postgresql://keyframe_user:password@localhost:5432/keyframe_db
 PORT=3002
 ADMIN_PASSWORD=your-admin-password
+DAILY_QUOTA=20
 CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_ACCESS_KEY_ID=
 CLOUDFLARE_SECRET_ACCESS_KEY=
@@ -55,7 +56,7 @@ DATABASE_URL=postgresql://keyframe_user:password@localhost:5432/keyframe_db
 
 # Third-party API keys
 OPENAI_API_KEY=
-NEBIUS_API_KEY=
+REPLICATE_API_TOKEN=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_REGION=us-east-1
@@ -79,10 +80,12 @@ FFPROBE_PATH=
 | Key | Service | Where to get it |
 |---|---|---|
 | `OPENAI_API_KEY` | Script + visual bible generation (GPT-4o-mini) | platform.openai.com |
-| `NEBIUS_API_KEY` | Flux-Schnell image generation (10–16 images/video) | studio.nebius.ai |
+| `REPLICATE_API_TOKEN` | Flux-Schnell image generation (10–16 images/video) | replicate.com |
 | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | Amazon Polly TTS (generative engine) | console.aws.amazon.com → IAM |
 | `CLOUDFLARE_*` + `R2_*` | Video/thumbnail storage | dash.cloudflare.com → R2 |
-| `ADMIN_PASSWORD` | Admin UI (upload/delete/rename videos in feed) | — set your own value |
+| `ADMIN_PASSWORD` | Admin UI (upload/delete/rename videos in feed) | — set your own value, same in `backend/api` and `frontend` |
+| `SESSION_SECRET` | Signs the admin session cookie (frontend only) | — set your own value; falls back to `ADMIN_PASSWORD` if unset |
+| `DAILY_QUOTA` | Global daily generation cap (`backend/api`, optional, default 20) | — set your own value |
 
 > **AWS note:** Create an IAM user with `AmazonPollyFullAccess` attached. The `generative` Polly engine (used by default, falls back to `neural`) requires `polly:SynthesizeSpeech` — same key, no extra setup needed.
 
@@ -197,9 +200,10 @@ Create `frontend/.env.local` to point the frontend at the real backend (already 
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 BACKEND_URL=http://localhost:3002
 ADMIN_PASSWORD=your-admin-password
+SESSION_SECRET=any-long-random-string
 ```
 
-> **Note:** `ADMIN_PASSWORD` has no `NEXT_PUBLIC_` prefix — it is server-side only and never sent to the browser. Admin auth uses httpOnly cookies. To log in as admin, click the logo on any page and enter the password.
+> **Note:** `ADMIN_PASSWORD` and `SESSION_SECRET` have no `NEXT_PUBLIC_` prefix — they are server-side only and never sent to the browser. Logging in sets an httpOnly session cookie signed with `SESSION_SECRET` (not the password itself), so a leaked cookie can't be used to derive your admin password. To log in as admin, click the logo on any page and enter the password.
 
 ## 2) Assets
 
@@ -209,17 +213,14 @@ Place optional static assets if you want the full visual polish (not required to
 - `public/assets/videos/mock.mp4` — mock demo video used by example pages
 - `public/assets/thumbnails/mock.jpg` — mock thumbnail
 
-## 3) Mock API vs Real Backend
+## 3) Frontend API routes
 
-- The repo includes simple Next.js API routes under `src/app/api/v1/*` that return mock jobIds and simulated status. These are convenient for local UI development.
-- To use the real backend instead, point the frontend to your backend by setting `NEXT_PUBLIC_BACKEND_URL` in `frontend/.env.local`, for example:
+The Next.js API routes under `src/app/api/v1/*` are real server-side proxies to the Express backend (generate, status, feed, quota, admin upload/delete/rename). Point them at your backend by setting `NEXT_PUBLIC_BACKEND_URL` / `BACKEND_URL` in `frontend/.env.local`:
 
 ```
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 BACKEND_URL=http://localhost:3002
 ```
-
-Then update client fetch calls to use `process.env.NEXT_PUBLIC_BACKEND_URL` (the code already prefers `NEXT_PUBLIC_BACKEND_URL` if present). If you run Next dev and keep the built-in API routes, local routes will take precedence — remove or rename the mock routes if you want all calls to go to the real backend.
 
 ## 4) File structure & pages
 
@@ -238,5 +239,4 @@ npm run lint
 npm run lint -- --fix
 ```
 
-### Developed by the Kushagra Katiyar
- 
+### Developed by Kushagra Katiyar

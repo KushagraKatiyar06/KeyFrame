@@ -5,7 +5,6 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 import subprocess
 
-# MODIFIED: Added temp_dir parameter
 def upload_files(job_id, video_path, temp_dir):
     """Upload video and thumbnail to Cloudflare R2
     Returns (video_url, thumbnail_url)
@@ -52,8 +51,7 @@ def upload_files(job_id, video_path, temp_dir):
         print(f"Video uploaded successfully: {video_filename}")
         
         # generates thumbnail from the video
-        # MODIFIED: Pass temp_dir to generate_thumbnail
-        thumbnail_path = generate_thumbnail(video_path, temp_dir, job_id) 
+        thumbnail_path = generate_thumbnail(video_path, temp_dir, job_id)
         # uploads the thumbnail
         with open(thumbnail_path, 'rb') as thumbnail_file:
             s3_client.upload_fileobj(
@@ -88,14 +86,11 @@ def upload_files(job_id, video_path, temp_dir):
         print(f"Unexpected error during upload: {e}")
         raise
 
-# MODIFIED: Removed job_id, added temp_dir
 def generate_thumbnail(video_path, temp_dir, job_id):
     """Generate a thumbnail from the video using FFmpeg
     Takes a frame from 1 second into the video
     """
     
-    # REMOVED: Internal temp_dir creation logic is now removed.
-    # The output path uses the passed temp_dir.
     thumbnail_path = os.path.join(temp_dir, f'thumbnail{job_id}.jpg')
     
     try:
@@ -130,6 +125,3 @@ def generate_thumbnail(video_path, temp_dir, job_id):
     except Exception as e:
         print(f"Unexpected error generating thumbnail: {e}")
         raise
-
-# REMOVED: The entire delete_temp_files function is deleted 
-# as cleanup is now centralized in orchestrator.py.

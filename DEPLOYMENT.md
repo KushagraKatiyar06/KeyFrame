@@ -156,4 +156,4 @@ SESSION_SECRET=<any long random string>   # signs the admin session cookie
 - Replicate (Flux-Schnell): pay per image, ~10–16 images/video
 - AWS Polly (generative engine): pay per character synthesized
 
-Target all-in cost is roughly **$0.20/video** — see root `CLAUDE.md` for the full cost/architecture breakdown.
+Target all-in cost is roughly **$0.05/video** — see root `CLAUDE.md` for the full cost/architecture breakdown.

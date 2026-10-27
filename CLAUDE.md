@@ -6,7 +6,7 @@ Auto-loaded context for Claude Code. Read this before touching any file.
 
 ## What this project is
 
-AI slideshow generator. User submits a prompt + style → gets back a ~1min video with images, voiceover, and captions. Target cost: ~$0.20/video.
+AI slideshow generator. User submits a prompt + style → gets back a ~1min video with images, voiceover, and captions. Target cost: ~$0.05/video.
 
 **Styles:** Educational, Storytelling, Meme
 

@@ -54,6 +54,7 @@ router.get('/:id/logs', async (req, res) => {
 });
 
 // PATCH /api/v1/status/:id/title — save video title from the done screen
+// no ownership check: the app has no user accounts, so the unguessable job UUID is the access token
 router.patch('/:id/title', async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,11 +1,8 @@
 import os
-import tempfile
 import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 import subprocess
-import random
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # main audio duration extraction
@@ -40,7 +37,7 @@ def get_audio_duration(path):
         if result:
             return result
 
-    print("Error recieving audio duration.")
+    print("Error receiving audio duration.")
     return None
 
 # main tts generation method — voice is now per-slide from script_json

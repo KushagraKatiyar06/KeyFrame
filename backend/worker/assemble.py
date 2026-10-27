@@ -1,7 +1,6 @@
-# FFmpeg will be used to process the audio and images to connect it tg
+# FFmpeg will be used to process the audio and images to connect it together
 import os
 import subprocess
-import tempfile
 
 def _ffmpeg():
     return os.getenv('FFMPEG_PATH') or os.path.abspath(

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { COOKIE_NAME, isAdminFromCookieValue } from '@/lib/adminSession';
 
 function checkAdmin(request) {
-    const session = request.cookies.get('kf_session');
-    return !!process.env.ADMIN_PASSWORD && session?.value === process.env.ADMIN_PASSWORD;
+    const session = request.cookies.get(COOKIE_NAME);
+    return isAdminFromCookieValue(session?.value);
 }
 
 export async function POST(request) {

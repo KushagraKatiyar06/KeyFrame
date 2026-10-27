@@ -39,29 +39,6 @@
     letter-spacing: 0.08em;
 }
 
-.progressBarContainer {
-    width: 80%;
-    max-width: 300px;
-    margin-bottom: 2rem;
-    background: #333;
-    height: 6px;
-    border-radius: 3px;
-}
-
-.progressBarFill {
-    background: #FF5757;
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.5s ease-out;
-}
-
-.detailStatus {
-    color: #aaa;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
 .errorText {
     color: #F87171;
     margin-top: 1.5rem;
@@ -205,11 +182,6 @@
     transform: translateY(-1px);
 }
 
-.editIcon {
-    color: #FFC8D2;
-    margin-left: -1rem;
-}
-
 /* Community section (author + submit) */
 .communitySection {
     display: flex;
@@ -327,35 +299,6 @@
 }
 
 .closeButton:hover {
-    background: #ff4040;
-    transform: scale(1.1);
-}
-
-.videoThumbnail {
-    width: 100%;
-    height: auto;
-}
-
-/* Back Button */
-.backButton {
-    position: absolute;
-    left: 2rem;
-    top: 8rem;
-    background: rgba(255, 87, 87, 0.9);
-    color: white;
-    border: none;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.1s;
-    z-index: 10;
-}
-
-.backButton:hover {
     background: #ff4040;
     transform: scale(1.1);
 }

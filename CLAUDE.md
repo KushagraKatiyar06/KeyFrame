@@ -6,23 +6,23 @@ Auto-loaded context for Claude Code. Read this before touching any file.
 
 ## What this project is
 
-AI slideshow generator. User submits a prompt + style → gets back a ~1min video with images, voiceover, and captions. Target cost: ~$0.20/video.
+AI slideshow generator. User submits a prompt + style → gets back a ~1min video with images, voiceover, and captions. Target cost: ~$0.05/video.
 
 **Styles:** Educational, Storytelling, Meme
 
-**Live site:** https://keyframe-one.vercel.app
+**Live site:** https://keyframe-frontend-production.up.railway.app
 
 ---
 
-## Current goal: Agentic Refactor (`agentic_enhancement` branch)
+## Current goal: Agentic Refactor
 
-Move from a linear try/except pipeline to a **State Machine** with named agent roles, granular UI feedback, and visual continuity across slides.
+Move from a linear try/except pipeline to a **State Machine** with named agent roles, granular UI feedback, and visual continuity across slides. (This work started on an `agentic_enhancement` branch; check `git branch` for the current working branch — it has since moved to iterating on model choice and quotas.)
 
 ### Agent roles
 
 | Agent | Responsibility |
 |---|---|
-| **The Watchman** (Sentinel) | Pre-flight: verify FFmpeg exists and is executable. Canary pings to OpenAI, Nebius (text), Replicate, AWS — fail immediately on 401/403 to prevent partial spend. |
+| **The Watchman** (Sentinel) | Pre-flight: verify FFmpeg exists and is executable. Canary pings to OpenAI, Replicate, AWS — fail immediately on 401/403 to prevent partial spend. |
 | **The Director** (Architect) | Generates the script + a **Global Visual Bible** (character descriptions, color palette, lighting style). |
 | **The Continuity Artist** (Image Gen) | Uses a single `session_seed` across all slides. Prepends the Visual Bible to every image prompt. Each prompt references the previous frame's context. |
 | **The Auditor** (Validator) | Checks images are > 0 bytes and audio durations > 0.5s. Retries the specific agent up to 3 times on failure. Cleans up temp `.mp4` segments only after confirming the final file is valid. |
@@ -42,7 +42,7 @@ Move from a linear try/except pipeline to a **State Machine** with named agent r
 ## Architecture
 
 ```
-frontend/          Next.js (port 3000) — UI + mock API routes
+frontend/          Next.js (port 3000) — UI + admin/feed API routes (proxy to backend)
 backend/api/       Express.js (port 3002) — job intake, Postgres, Redis queue
 backend/worker/    Python Celery — full AI pipeline
 bin/               ffmpeg.exe + ffprobe.exe (gitignored)
@@ -57,7 +57,7 @@ User → Next.js → POST /api/v1/generate (Express)
                        ↓
                Celery worker picks up job
                1. Watchman pre-flight check
-               2. Director: generate_script() + Visual Bible  — Nebius (nemotron)
+               2. Director: generate_script() + Visual Bible  — OpenAI (gpt-4o-mini)
                3. Continuity Artist: generate_images()        — Replicate (Flux-Schnell) ─┐ parallel
                4. Voice Over: generate_voice_over()           — Amazon Polly           ─┘
                5. Auditor: validate outputs, retry up to 3x
@@ -79,10 +79,12 @@ User polls GET /api/v1/status/:jobId → gets video_url when done
 | `backend/api/redis.js` | Redis client + pushJob (formats Celery-compatible message) |
 | `backend/api/routes/generate.js` | POST /api/v1/generate — validates, inserts to DB, pushes to Redis |
 | `backend/api/routes/status.js` | GET /api/v1/status/:jobId — polls Postgres |
-| `backend/api/routes/feed.js` | GET /api/v1/feed — last 15 completed videos (5 per style) |
+| `backend/api/routes/feed.js` | GET /api/v1/feed — all completed, non-hidden videos (search filter, no limit/per-style cap yet) |
+| `backend/api/routes/admin.js` | Admin upload/delete/rename/hide, gated by `ADMIN_PASSWORD` bearer token |
+| `backend/api/routes/quota.js` | GET /api/v1/quota — daily global + per-user generation limits (Redis-backed) |
 | `backend/worker/app.py` | Celery app init, broker = REDIS_URL |
 | `backend/worker/orchestrator.py` | Main Celery task — orchestrates all pipeline steps |
-| `backend/worker/script.py` | Nebius nemotron call → structured JSON script with slides |
+| `backend/worker/script.py` | OpenAI (gpt-4o-mini) call → structured JSON script with slides + Visual Bible |
 | `backend/worker/image_generation.py` | Replicate API → Flux-Schnell image per slide |
 | `backend/worker/voice_over.py` | Amazon Polly TTS per slide → binary concat (no FFmpeg) |
 | `backend/worker/assemble.py` | FFmpeg: images + audio → MP4 segments → final video |
@@ -138,18 +140,24 @@ Hosted on **Neon** (serverless Postgres). Free tier may expire.
 
 ### `backend/api/.env`
 ```
-DATABASE_URL=...   # Neon Postgres connection string
-REDIS_URL=...      # Redis Cloud URL
-PORT=3001
+DATABASE_URL=...        # Neon Postgres connection string
+REDIS_URL=...           # Redis Cloud URL
+PORT=3002
+ADMIN_PASSWORD=...      # shared secret for admin upload/delete/rename/hide endpoints
+DAILY_QUOTA=20          # optional, defaults to 20 — global daily generation cap
+CLOUDFLARE_ACCOUNT_ID=...          # needed here too — admin upload posts directly to R2
+CLOUDFLARE_ACCESS_KEY_ID=...
+CLOUDFLARE_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=...
+R2_PUBLIC_DOMAIN=...
 ```
 
 ### `backend/worker/.env`
 ```
 DATABASE_URL=...
 REDIS_URL=...
-OPENAI_API_KEY=...
-NEBIUS_API_KEY=...         # used for nemotron text model (script + visual bible)
-REPLICATE_API_TOKEN=...    # used for Flux-Schnell image generation
+OPENAI_API_KEY=...        # script + visual bible generation (gpt-4o-mini) — also pinged by the Watchman
+REPLICATE_API_TOKEN=...   # Flux-Schnell image generation
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=us-east-1
@@ -165,6 +173,9 @@ FFPROBE_PATH=...   # e.g. C:\Program Files\ffmpeg\bin\ffprobe.exe
 ### `frontend/.env.local`
 ```
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
+BACKEND_URL=http://localhost:3002
+ADMIN_PASSWORD=...     # must match backend/api's ADMIN_PASSWORD
+SESSION_SECRET=...     # signs the admin session cookie; falls back to ADMIN_PASSWORD if unset
 ```
 
 **Gotchas:**
@@ -194,7 +205,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 ### Backend API (Terminal 1)
 ```bash
 cd backend/api
-node index.js        # reads .env automatically, runs on port 3001
+node index.js        # reads .env automatically, runs on port 3002 (set via PORT; code falls back to 3000 if unset)
 ```
 
 ### Python Worker (Terminal 2)
@@ -231,14 +242,12 @@ npm run dev          # runs on port 3000
 | Redis Cloud | Celery broker + job queue | app.redislabs.com |
 | Cloudflare R2 | Video + thumbnail storage | dash.cloudflare.com |
 | AWS (Polly) | Text-to-speech | console.aws.amazon.com |
-| Nebius | nemotron text generation (script + visual bible) | studio.nebius.ai |
 | Replicate | Flux-Schnell image generation | replicate.com |
-| OpenAI | (ping only in Watchman) | platform.openai.com |
-| Vercel | Frontend hosting | vercel.com |
-| Railway | Backend hosting (prod) | railway.app |
+| OpenAI | Script + Visual Bible generation (gpt-4o-mini), also pinged by the Watchman | platform.openai.com |
+| Railway | Frontend + backend API + worker hosting (prod — all three services) | railway.app |
 
 ---
 
 ## Branch info
 - `main` — production
-- `agentic_enhancement` — current working branch
+- Feature work happens on short-lived branches off `main` (check `git branch` / `git log` for what's currently active — this section goes stale fast, don't treat it as authoritative)

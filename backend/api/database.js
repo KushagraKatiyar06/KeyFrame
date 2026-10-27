@@ -66,31 +66,6 @@ async function insertJob(prompt, style) {
   }
 }
 
-//updates the job status and optionally the video/thumbnail urls
-async function updateJobStatus(id, status, videoUrl = null, thumbnailUrl = null) {
-  const query = `
-    UPDATE videos
-    SET status = $1,
-        video_url = COALESCE($2, video_url),
-        thumbnail_url = COALESCE($3, thumbnail_url)
-    WHERE id = $4
-    RETURNING id;
-  `;
-
-  try {
-    const result = await pool.query(query, [status, videoUrl, thumbnailUrl, id]);
-    
-    if (result.rowCount === 0) {
-      throw new Error('Job not found');
-    }
-    console.log('Job status updated:', id);
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating job:', error.message);
-    throw error;
-  }
-}
-
 //gets a single job by its id
 async function getJobById(id){
   const query = `
@@ -214,20 +189,6 @@ async function setVideoHidden(id, hidden) {
   }
 }
 
-//appends a log line to a job's logs array
-async function appendJobLog(id, message) {
-  const query = `
-    UPDATE videos
-    SET logs = array_append(logs, $1)
-    WHERE id = $2;
-  `;
-  try {
-    await pool.query(query, [`[${new Date().toISOString()}] ${message}`, id]);
-  } catch (error) {
-    console.error('Error appending log:', error.message);
-  }
-}
-
 //gets the logs array for a job
 async function getJobLogs(id) {
   const query = `SELECT logs FROM videos WHERE id = $1;`;
@@ -238,24 +199,6 @@ async function getJobLogs(id) {
   } catch (error) {
     console.error('Error getting logs:', error.message);
     return [];
-  }
-}
-
-//deletes videos by prompt text
-async function deleteVideosByPrompt(prompt) {
-  const query = `
-    DELETE FROM videos
-    WHERE prompt = $1
-    RETURNING id;
-  `;
-
-  try {
-    const result = await pool.query(query, [prompt]);
-    console.log(`Deleted ${result.rowCount} video(s) with prompt: "${prompt}"`);
-    return { success: true, deletedCount: result.rowCount };
-  } catch (error) {
-    console.error('Error deleting videos:', error.message);
-    throw error;
   }
 }
 
@@ -274,15 +217,12 @@ module.exports = {
   createVideosTable,
   insertJob,
   insertCompletedVideo,
-  updateJobStatus,
   getJobById,
   getJobLogs,
-  appendJobLog,
   getRecentCompletedVideos,
   deleteVideoById,
   updateVideoTitle,
   updateVideoAuthor,
   setVideoHidden,
-  deleteVideosByPrompt,
   closePool
 };

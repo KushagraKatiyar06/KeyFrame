@@ -2,143 +2,110 @@
 
 ## Architecture Overview
 
-KeyFrame consists of 3 main components:
-1. **Frontend (Next.js)** - Deployed on Vercel
-2. **Backend API (Express/Node.js)** - Deployed on Railway/Render
-3. **Celery Worker (Python)** - Deployed on Railway/Render
+KeyFrame consists of 3 services, all deployed on **Railway**:
+1. **Frontend (Next.js)** — `frontend/`
+2. **Backend API (Express/Node.js)** — `backend/api/`
+3. **Celery Worker (Python)** — `backend/worker/`
+
+Each service is its own Railway service with its own root directory and its own Procfile — Railway's Nixpacks builder auto-detects and runs them (the worker's `nixpacks.toml` also installs `ffmpeg` at build time). There are legacy `Dockerfile.*` files in the repo from an earlier deploy attempt; they are not currently used by any service and are safe to ignore (or delete, if nothing still points at them).
 
 ## Prerequisites
 
 - GitHub repository access (contributor or owner)
 - Accounts on:
-  - Vercel (for frontend)
-  - Railway or Render (for backend + worker)
-  - AWS S3 (for video storage)
-  - OpenAI API (for GPT-4 and DALL-E)
-  - AWS Polly (for text-to-speech)
-  - Nebius API (for Flux image generation)
+  - Railway (frontend + backend + worker + Postgres + Redis)
+  - OpenAI API (script + visual bible generation, gpt-4o-mini)
+  - Replicate (Flux-Schnell image generation)
+  - AWS (Polly text-to-speech)
+  - Cloudflare (R2 — video/thumbnail storage)
 
 ## Deployment Steps
 
-### 1. Deploy Backend Services (Railway - Recommended)
+### 1. Create the Railway project
 
-#### Step 1.1: Create Railway Project
 1. Go to [railway.app](https://railway.app)
 2. Click "New Project"
 3. Connect your GitHub repository
 
-#### Step 1.2: Deploy PostgreSQL
-1. Click "New" → "Database" → "PostgreSQL"
-2. Railway will automatically provision the database
-3. Note the connection string from the "Connect" tab
+### 2. Add managed databases
 
-#### Step 1.3: Deploy Redis
-1. Click "New" → "Database" → "Redis"
-2. Railway will automatically provision Redis
-3. Note the connection string
+1. Click "New" → "Database" → "PostgreSQL" — note the connection string from the "Connect" tab
+2. Click "New" → "Database" → "Redis" — note the connection string
 
-#### Step 1.4: Deploy Backend API
-1. Click "New" → "GitHub Repo"
-2. Select KeyFrame repository
-3. Set root directory: `backend`
-4. Set Dockerfile path: `Dockerfile.api`
-5. Add environment variables:
-   ```
-   DB_HOST=<from Railway Postgres>
-   DB_PORT=5432
-   DB_NAME=<from Railway Postgres>
-   DB_USER=<from Railway Postgres>
-   DB_PASSWORD=<from Railway Postgres>
-   REDIS_URL=<from Railway Redis>
-   OPENAI_API_KEY=<your key>
-   AWS_ACCESS_KEY_ID=<your key>
-   AWS_SECRET_ACCESS_KEY=<your key>
-   AWS_REGION=us-east-1
-   S3_BUCKET_NAME=<your bucket>
-   NEBIUS_API_KEY=<your key>
-   ```
-6. Deploy and note the public URL
+### 3. Deploy the Backend API
 
-#### Step 1.5: Deploy Celery Worker
-1. Click "New" → "GitHub Repo"
-2. Select KeyFrame repository again
-3. Set root directory: `backend`
-4. Set Dockerfile path: `Dockerfile.worker`
-5. Add the same environment variables as API
-6. Deploy
+1. Click "New" → "GitHub Repo" → select the KeyFrame repository
+2. Set **Root Directory**: `backend/api`
+3. Railway will detect `Procfile` (`web: node index.js`) via Nixpacks — no Dockerfile needed
+4. Add environment variables (see reference below)
+5. Deploy and note the public URL — this is `BACKEND_URL` for the frontend
 
-### 2. Deploy Frontend (Vercel)
+### 4. Deploy the Celery Worker
 
-#### Step 2.1: Connect Repository
-1. Go to [vercel.com](https://vercel.com)
-2. Click "New Project"
-3. Import your GitHub repository
+1. Click "New" → "GitHub Repo" → select the KeyFrame repository again
+2. Set **Root Directory**: `backend/worker`
+3. Railway will detect `Procfile` (`worker: celery -A app worker --loglevel=info --concurrency=1`) and `nixpacks.toml` (installs `ffmpeg`)
+4. Add environment variables (see reference below)
+5. Deploy
 
-#### Step 2.2: Configure Project
-- **Framework Preset**: Next.js
-- **Root Directory**: `frontend`
-- **Build Command**: `npm run build`
-- **Output Directory**: `.next`
+### 5. Deploy the Frontend
 
-#### Step 2.3: Add Environment Variables
-```
-BACKEND_URL=<Railway API URL from step 1.4>
-```
-
-#### Step 2.4: Deploy
-Click "Deploy" and wait for build to complete
-
-### 3. Alternative: Deploy Everything on Railway
-
-If you want everything on one platform:
-
-1. Create Railway project
-2. Add PostgreSQL database
-3. Add Redis database
-4. Add 3 services from GitHub:
-   - Service 1: Backend API (Dockerfile.api)
-   - Service 2: Celery Worker (Dockerfile.worker)
-   - Service 3: Frontend (auto-detected Next.js)
+1. Click "New" → "GitHub Repo" → select the KeyFrame repository again
+2. Set **Root Directory**: `frontend`
+3. Railway will detect `Procfile` (`web: node .next/standalone/server.js`) and build with `npm run build` (standalone output)
+4. Add environment variables (see reference below) — `BACKEND_URL` should point at the backend API service's Railway URL
+5. Deploy and note the public URL — this is the live site
 
 ## Environment Variables Reference
 
-### Backend API & Worker
+### Backend API (`backend/api`)
 ```bash
-# Database
-DB_HOST=<postgres host>
-DB_PORT=5432
-DB_NAME=<database name>
-DB_USER=<database user>
-DB_PASSWORD=<database password>
-
-# Redis
-REDIS_URL=redis://<redis-host>:6379
-
-# AI Services
-OPENAI_API_KEY=<your openai key>
-NEBIUS_API_KEY=<your nebius key>
-
-# AWS Services
-AWS_ACCESS_KEY_ID=<your aws key>
-AWS_SECRET_ACCESS_KEY=<your aws secret>
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=<your s3 bucket>
+DATABASE_URL=<Railway Postgres connection string>
+REDIS_URL=<Railway Redis connection string>
+PORT=3002
+ADMIN_PASSWORD=<shared admin secret — must match frontend's ADMIN_PASSWORD>
+DAILY_QUOTA=20                       # optional, defaults to 20
+CLOUDFLARE_ACCOUNT_ID=<your account id>
+CLOUDFLARE_ACCESS_KEY_ID=<R2 access key>
+CLOUDFLARE_SECRET_ACCESS_KEY=<R2 secret key>
+R2_BUCKET_NAME=<your bucket>
+R2_PUBLIC_DOMAIN=<your public R2 domain>
 ```
 
-### Frontend
+### Celery Worker (`backend/worker`)
 ```bash
-BACKEND_URL=<backend api url>
+DATABASE_URL=<same Railway Postgres connection string>
+REDIS_URL=<same Railway Redis connection string>
+OPENAI_API_KEY=<your OpenAI key>              # script + visual bible (gpt-4o-mini)
+REPLICATE_API_TOKEN=<your Replicate token>    # Flux-Schnell image generation
+AWS_ACCESS_KEY_ID=<your AWS key>
+AWS_SECRET_ACCESS_KEY=<your AWS secret>
+AWS_REGION=us-east-1
+CLOUDFLARE_ACCOUNT_ID=<your account id>
+CLOUDFLARE_ACCESS_KEY_ID=<R2 access key>
+CLOUDFLARE_SECRET_ACCESS_KEY=<R2 secret key>
+R2_BUCKET_NAME=<your bucket>
+R2_PUBLIC_DOMAIN=<your public R2 domain>
+```
+`ffmpeg` is installed automatically at build time via `nixpacks.toml` — no `FFMPEG_PATH`/`FFPROBE_PATH` needed on Railway (those env vars only matter for local Windows dev, see root `CLAUDE.md`).
+
+### Frontend (`frontend`)
+```bash
+NEXT_PUBLIC_BACKEND_URL=<backend API Railway URL>
+BACKEND_URL=<backend API Railway URL>
+ADMIN_PASSWORD=<same value as backend API's ADMIN_PASSWORD>
+SESSION_SECRET=<any long random string>   # signs the admin session cookie
 ```
 
 ## Testing Deployment
 
-1. Visit your Vercel URL
+1. Visit your frontend's Railway URL
 2. Try generating a video
 3. Check Railway logs to ensure:
    - API receives the request
-   - Worker processes the job
-   - Video uploads to S3
-   - Database updates with video URL
+   - Worker picks up the job and runs through Watchman → Director → Continuity Artist → Auditor
+   - Video uploads to Cloudflare R2
+   - Database updates with the video URL
 
 ## Troubleshooting
 
@@ -146,46 +113,47 @@ BACKEND_URL=<backend api url>
 
 **Worker not processing jobs:**
 - Check Redis connection in Railway logs
-- Verify Celery worker is running
-- Check environment variables match between API and Worker
+- Verify the Celery worker service is running
+- Check `REDIS_URL`/`DATABASE_URL` match between API and Worker
 
 **Videos not uploading:**
-- Verify AWS credentials
-- Check S3 bucket permissions
-- Ensure bucket is in correct region
+- Verify `CLOUDFLARE_*`/`R2_*` credentials
+- Check the R2 bucket's public domain is configured in the Cloudflare dashboard
+- Confirm the bucket name matches `R2_BUCKET_NAME`
 
 **Frontend can't reach backend:**
-- Verify BACKEND_URL in Vercel environment variables
-- Check Railway API service is running
-- Ensure no CORS issues (already configured in backend)
+- Verify `BACKEND_URL` / `NEXT_PUBLIC_BACKEND_URL` in the frontend's Railway environment variables
+- Check the backend API service is running
+- Ensure no CORS issues (already configured in `backend/api`)
 
 **Database connection errors:**
-- Verify DATABASE_URL or individual DB variables
-- Check PostgreSQL service is running on Railway
-- Ensure database table is created (runs automatically on first API start)
+- Verify `DATABASE_URL` is set correctly on both API and worker services
+- Check the PostgreSQL service is running on Railway
+- The `videos` table is created automatically on first API start
+
+**Admin login not working across services:**
+- `ADMIN_PASSWORD` must be identical on the frontend and backend API services
+- Set `SESSION_SECRET` on the frontend so the admin session cookie isn't signed with a fallback
 
 ## Scaling Considerations
 
-- **Railway**: Auto-scales based on traffic
-- **Vercel**: Auto-scales frontend globally
-- **Worker**: Can be scaled horizontally by adding more worker services
-- **Database**: Railway provides automatic backups and scaling
+- **Railway**: auto-scales each service based on traffic/usage
+- **Worker**: can be scaled horizontally by adding more worker service instances
+- **Database**: Railway provides automatic backups for managed Postgres
 
 ## Cost Estimates
 
-### Railway (Backend + Worker + DB)
+### Railway (frontend + backend + worker + Postgres + Redis)
 - Free tier: $5 credit/month
-- Pro: ~$20-50/month depending on usage
+- Usage-based beyond that: roughly $5–20/month for light traffic
 
-### Vercel (Frontend)
-- Free tier: Generous limits for personal projects
-- Pro: $20/month if needed
-
-### AWS S3
-- ~$0.023 per GB storage
-- ~$0.09 per GB transfer
+### Cloudflare R2 (video/thumbnail storage)
+- No egress fees
+- ~$0.015/GB-month storage
 
 ### API Costs
-- OpenAI: Pay per token
-- AWS Polly: $4 per 1M characters
-- Nebius: Varies by usage
+- OpenAI (gpt-4o-mini): pay per token, a few cents per script + visual bible
+- Replicate (Flux-Schnell): pay per image, ~10–16 images/video
+- AWS Polly (generative engine): pay per character synthesized
+
+Target all-in cost is roughly **$0.05/video** — see root `CLAUDE.md` for the full cost/architecture breakdown.

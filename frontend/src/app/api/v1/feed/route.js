@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { COOKIE_NAME, isAdminFromCookieValue } from '@/lib/adminSession';
 
 //Proxy to backend API
 export async function GET(request) {
@@ -15,8 +16,8 @@ export async function GET(request) {
         // forward admin auth so backend can include hidden videos for admins
         const { cookies } = await import('next/headers');
         const cookieStore = await cookies();
-        const session = cookieStore.get('kf_session');
-        const isAdmin = !!process.env.ADMIN_PASSWORD && session?.value === process.env.ADMIN_PASSWORD;
+        const session = cookieStore.get(COOKIE_NAME);
+        const isAdmin = isAdminFromCookieValue(session?.value);
 
         const response = await fetch(`${backendUrl}/api/v1/feed${backendSearch}`, {
             signal: controller.signal,

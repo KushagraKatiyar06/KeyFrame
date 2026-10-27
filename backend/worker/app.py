@@ -1,17 +1,10 @@
 import os
 from dotenv import load_dotenv
 from celery import Celery
-import ssl
 
 load_dotenv()
 
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-
-
-broker_use_ssl = {
-    'ssl_cert_reqs': ssl.CERT_NONE
-}
-
 
 app = Celery(
     'keyframe_worker',

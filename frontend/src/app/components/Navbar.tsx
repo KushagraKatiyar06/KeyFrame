@@ -4,24 +4,18 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import styles from "./Navbar.module.css";
+import { useIsAdmin } from "../../lib/useIsAdmin";
 
 interface NavbarProps {
   activePath?: string;
 }
 
 export function Navbar({ activePath = "/" }: NavbarProps) {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useIsAdmin();
   const [showModal, setShowModal] = useState(false);
   const [password, setPassword] = useState('');
   const [shake, setShake] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    fetch('/api/v1/admin/session')
-      .then(r => r.json())
-      .then(data => setIsAdmin(data.isAdmin))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (showModal) {

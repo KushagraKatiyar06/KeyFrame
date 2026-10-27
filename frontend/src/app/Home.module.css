@@ -172,45 +172,6 @@
   align-items: center;
 }
 
-/*Style buttons*/
-.styleButtons {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.styleButton {
-  padding: 1rem 2.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 87, 87, 0.3);
-  border-radius: 70px;
-  color: #ffffff;
-  font-size: 1.1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.styleButton:hover {
-  background: rgba(255, 87, 87, 0.1);
-  border-color: #FF5757;
-  transform: translateY(-2px);
-}
-
-.styleButton.selected {
-  background: #FF5757;
-  border-color: #FF5757;
-  box-shadow: 0 0 20px rgba(255, 87, 87, 0.5);
-}
-
-.styleButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /*the Submit button for the video*/
 .submitButton {
   padding: 1.25rem 4rem;
@@ -319,14 +280,6 @@
   .promptSectionLogo {
     width: 80px;
     height: 80px;
-  }
-
-  .styleButtons {
-    flex-direction: column;
-  }
-
-  .styleButton {
-    width: 100%;
   }
 
   .submitButton {

@@ -13,6 +13,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px;
 }
 
 body {
@@ -29,8 +30,4 @@ main {
 
 button {
   font-family: inherit;
-}
-
-html {
-  scroll-padding-top: 80px;
 }

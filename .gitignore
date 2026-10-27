@@ -24,12 +24,10 @@ npm-debug.log*
 
 # Virtual Enviroment
 venv/
-
+.venv/
 
 # ffmeg
 /bin/
-
-CLAUDE.md1
 
 services.txt
 explanation.txt

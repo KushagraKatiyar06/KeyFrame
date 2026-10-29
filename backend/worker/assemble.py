@@ -67,37 +67,3 @@ def stitch_video(image_paths, audio_path, timings, job_id, temp_dir):
     print(f"Video created: {output_path} ({file_size_mb:.2f} MB)")
 
     return output_path
-
-
-def get_video_info(video_path):
-    try:
-        FFPROBE_PATH = os.getenv('FFPROBE_PATH') or os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'bin', 'ffprobe.exe'))
-        command = [
-            FFPROBE_PATH,
-            '-v', 'quiet',
-            '-print_format', 'json',
-            '-show_format',
-            '-show_streams',
-            video_path
-        ]
-
-        result = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        )
-
-        import json
-        info = json.loads(result.stdout)
-
-        duration = float(info['format'].get('duration', 0))
-        size_mb = int(info['format'].get('size', 0)) / (1024 * 1024)
-
-        print(f"Video info: {duration:.2f}s duration, {size_mb:.2f} MB")
-        return info
-
-    except Exception as e:
-        print(f"Could not get video info: {e}")
-        return None

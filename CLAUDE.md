@@ -75,7 +75,7 @@ User polls GET /api/v1/status/:jobId → gets video_url when done
 | File | Purpose |
 |---|---|
 | `backend/api/index.js` | Express entry, mounts routes, initializes DB table |
-| `backend/api/database.js` | All Postgres queries (insertJob, updateJobStatus, getJobById, getRecentCompletedVideos) |
+| `backend/api/database.js` | All Postgres queries (insertJob, getJobById, getRecentCompletedVideos) — status updates happen from the Python side (`backend/worker/database.py`), not here |
 | `backend/api/redis.js` | Redis client + pushJob (formats Celery-compatible message) |
 | `backend/api/routes/generate.js` | POST /api/v1/generate — validates, inserts to DB, pushes to Redis |
 | `backend/api/routes/status.js` | GET /api/v1/status/:jobId — polls Postgres |

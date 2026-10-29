@@ -2,8 +2,6 @@
 
 An agentic AI slideshow generator. Submit a prompt and pick a style, get back a ~1 minute video with AI-generated images, voiceover, and captions, for about **$0.05/video**. Generation runs through four specialized agents — a pre-flight checker, a scriptwriter, an image artist that keeps every slide visually consistent, and a validator — with live progress streamed to the screen the whole way.
 
-🎬 **Live**: https://keyframe-frontend-production.up.railway.app/
-
 ![Landing page](Screenshots/landing-hero.png)
 
 <p align="center">
@@ -22,6 +20,7 @@ An agentic AI slideshow generator. Submit a prompt and pick a style, get back a 
   <img src="https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white" alt="Railway">
 </p>
 
+Deployment: https://keyframe-frontend-production.up.railway.app/
 > If generation fails on the live site, the free tiers for Redis or Postgres may have expired — see the Deployment note below. The Community tab shows videos other users have generated.
 
 ## What it does

@@ -7,7 +7,7 @@ KeyFrame consists of 3 services, all deployed on **Railway**:
 2. **Backend API (Express/Node.js)** — `backend/api/`
 3. **Celery Worker (Python)** — `backend/worker/`
 
-Each service is its own Railway service with its own root directory and its own Procfile — Railway's Nixpacks builder auto-detects and runs them (the worker's `nixpacks.toml` also installs `ffmpeg` at build time). There are legacy `Dockerfile.*` files in the repo from an earlier deploy attempt; they are not currently used by any service and are safe to ignore (or delete, if nothing still points at them).
+Each service is its own Railway service with its own root directory and its own Procfile — Railway's Nixpacks builder auto-detects and runs them (the worker's `nixpacks.toml` also installs `ffmpeg` at build time).
 
 ## Prerequisites
 

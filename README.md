@@ -153,7 +153,7 @@ Backend API
 ```powershell
 cd backend/api
 npm install       # skip if node_modules already exists
-node index.js     # PORT is read from backend/api/.env (default 3001)
+node index.js     # PORT is read from backend/api/.env (default 3000)
 ```
 
 Python worker (Windows recommended steps)
